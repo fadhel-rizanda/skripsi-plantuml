@@ -1,0 +1,122 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor User
+participant "Next.js Pet List Page" as FE
+participant "Laravel PetController" as BE_Pet
+participant "Laravel FilterController" as BE_Filter
+participant "Redis (Cache)" as Redis
+database "PostgreSQL (DB)" as DB
+
+' === Normal Flow: Melihat Daftar Hewan ===
+User -> FE: Klik menu "Find a Pet" pada navbar
+activate FE
+
+' --- Paralel Request ---
+par Ambil daftar hewan
+    FE -> BE_Pet: GET /api/pets
+    deactivate FE
+    activate BE_Pet
+    BE_Pet -> DB: Mencari semua hewan yang tersedia
+    activate DB
+    DB --> BE_Pet: Return list of pets / null
+    deactivate DB
+
+    alt Data hewan berhasil dimuat
+        BE_Pet --> FE: 200 OK (List of pets)
+        activate FE
+        FE -> User: Tampilkan daftar hewan
+        deactivate FE
+    else Gagal memuat data hewan
+        BE_Pet --> FE: 500 Internal Server Error ("Failed to load pets")
+        deactivate BE_Pet
+        activate FE
+        FE -> User: Tampilkan pesan error "Failed to load pets"
+    end
+
+else Ambil data filter (spesies, umur, lokasi, tag)
+    FE -> BE_Filter: GET /api/pet-filters
+    activate BE_Filter
+    BE_Filter -> Redis: GET cache:pet_filters
+    activate Redis
+
+    alt Cache tersedia
+        Redis --> BE_Filter: Return cached filters
+        BE_Filter --> FE: 200 OK (Cached filters)
+        deactivate BE_Filter
+    else Cache kosong / expired
+        Redis --> BE_Filter: Cache miss
+        deactivate Redis
+        activate BE_Filter
+        BE_Filter -> DB: Mengambil semua data filter dari tabel referensi
+        activate DB
+        DB --> BE_Filter: Return filter data
+        deactivate DB
+        BE_Filter -> Redis: SET cache:pet_filters (data, expired 1 jam)
+        activate Redis
+        Redis --> BE_Filter: OK
+        deactivate Redis
+        BE_Filter --> FE: 200 OK (Filters from DB)
+        deactivate BE_Filter
+    end
+    FE -> FE:Simpan filter di FE
+    activate FE #LightBlue
+    deactivate FE #LightBlue
+end
+
+activate FE
+FE -> User: Tampilkan daftar hewan & filter (spesies, umur, lokasi)
+deactivate FE
+
+
+' === Flow: Menggunakan Filter atau Pencarian ===
+User -> FE: Masukkan kriteria (spesies, umur, tag, keyword)
+activate FE
+FE -> BE_Pet: GET /api/pets?filter=...
+deactivate FE
+activate BE_Pet
+BE_Pet -> DB: Mencari semua hewan berdasarkan kriteria
+activate DB
+DB --> BE_Pet: Return filtered pets / null
+deactivate DB
+BE_Pet --> FE: 200 OK (Filtered pets)
+deactivate BE_Pet
+activate FE
+FE -> User: Tampilkan hasil pencarian/filter
+deactivate FE
+
+
+' === Flow: Melihat Detail Hewan ===
+User -> FE: Klik salah satu hewan dari daftar
+activate FE
+FE -> BE_Pet: GET /api/pets/{pet_id}
+deactivate FE
+activate BE_Pet
+BE_Pet -> DB: Mencari detail hewan berdasarkan pet_id
+activate DB
+DB --> BE_Pet: Return pet detail / null
+deactivate DB
+
+alt Detail hewan ditemukan
+    BE_Pet --> FE: 200 OK (Pet detail)
+    activate FE
+    FE -> User: Tampilkan halaman detail hewan
+    deactivate FE
+else Hewan tidak ditemukan / telah dihapus
+    BE_Pet --> FE: 404 Not Found ("Pet not found")
+    deactivate BE_Pet
+    activate FE
+    FE -> User: Tampilkan pesan error "Pet not found"
+    deactivate FE
+end
+@enduml

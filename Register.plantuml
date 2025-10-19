@@ -1,0 +1,214 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor User
+participant "Next.js Register Page" as FE
+participant "Laravel AuthController" as BE
+participant "Redis (Cache)" as Redis
+database "PostgreSQL (DB)" as DB
+participant "Mailer Service" as Mailer
+participant "Google OAuth" as Google
+
+' === Registration Flow ===
+User -> FE: Isi form (username, email, password)
+activate FE
+FE -> BE: POST /api/register { username, email, password }
+deactivate FE
+activate BE
+BE -> BE: Validasi input (format, kelengkapan)
+activate BE #LightBlue
+
+alt Invalid input format or missing data
+    BE --> FE: 400 Bad Request ("Invalid input")
+    deactivate BE
+    activate FE
+    FE -> User: Show error message ("Invalid input")
+    deactivate FE
+
+else Valid input
+    BE -> DB: Cek email/username sudah terdaftar?
+    activate DB
+    DB --> BE: Tidak ditemukan (OK)
+    deactivate DB
+    BE -> DB: Membuat data user baru dengan is_verified=false
+    activate DB
+    DB --> BE: OK (User created)
+    deactivate DB
+
+    BE -> Redis: SET OTP:{email} = generated_code (expired 5 menit)
+    activate Redis
+    Redis --> BE: OK
+    deactivate Redis
+
+    BE -> Mailer: Kirim email berisi kode OTP ke user
+    activate Mailer
+    Mailer --> BE: OK (Email sent)
+    deactivate Mailer
+    activate FE
+    BE --> FE: 201 Created (User data, Auth token, OTP sent)
+    FE -> FE: Simpan Auth token dan user data
+    activate FE #LightBlue
+    deactivate FE #LightBlue
+    deactivate BE
+    FE -> User: Tampilkan halaman aktivasi akun (input kode OTP / pilihan Verify Later)
+    deactivate FE
+    deactivate FE
+
+    else Email or username already exists
+        activate DB
+        DB --> BE: Conflict
+        deactivate DB
+        activate BE
+        BE --> FE: 409 Conflict ("Email or username already exists")
+        deactivate BE
+        activate FE
+        FE -> User: Show error message ("Email or username already exists")
+        deactivate FE
+
+    else Failed to send email
+        activate Mailer
+        Mailer --> BE: Error
+        deactivate Mailer
+        activate BE
+        BE --> FE: 500 Internal Server Error ("Failed to send verification email")
+        deactivate BE
+        activate FE
+        FE -> User: Show error message ("Failed to send email")
+        deactivate FE
+end
+
+
+' === Account Activation Flow ===
+alt User pilih "Verify Code"
+    User -> FE: Input kode OTP dari email
+    activate FE
+    FE -> BE: POST /api/verify-otp { email, otp_code }
+    deactivate FE
+    activate BE
+    BE -> Redis: GET OTP:{email}
+    activate Redis
+    Redis --> BE: returned_code
+    deactivate Redis
+
+    alt OTP valid
+        BE -> BE: Cocokkan returned_code dengan otp_code
+        activate BE #LightBlue
+        deactivate BE
+        BE -> DB: perbarui data user is_verified=true
+        activate DB
+        DB --> BE: OK (User verified)
+        deactivate DB
+        BE -> BE: Menetapkan role adopter dan provider
+        activate BE #LightBlue
+        deactivate BE
+        BE -> DB: perbarui data user_role
+        activate DB
+        DB --> BE: OK (role assigned)
+        deactivate DB
+        BE --> FE: 200 OK (Akun terverifikasi)
+        deactivate BE
+        activate FE
+        FE -> User: Tampilkan notifikasi sukses verifikasi akun
+        deactivate FE
+
+    else OTP tidak cocok atau kadaluarsa
+        activate BE
+        BE --> FE: 400 Bad Request (OTP invalid atau expired)
+        deactivate BE
+        activate FE
+        FE -> User: Tampilkan pesan error "Invalid or expired OTP. Please try again."
+        deactivate FE
+    end
+
+else User pilih "Verify Later"
+    User -> FE: Klik tombol "Verify Later"
+    activate FE
+    FE -> BE: POST /api/verify-later { email }
+    deactivate FE
+    activate BE
+    BE --> FE: 200 OK (Pilihan disimpan)
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan "Verification skipped. You can verify later from your profile."
+    deactivate FE
+end
+
+' === Google Login Flow ===
+User -> FE: Klik "Login with Google"
+activate FE
+FE -> Google: Request OAuth Token
+activate Google
+Google --> FE: Return OAuth Credential (id_token, email, name)
+deactivate Google
+
+FE -> BE: POST /api/login/google { id_token }
+activate BE
+BE -> Google: Validasi id_token
+activate Google
+Google --> BE: Valid (user info)
+deactivate Google
+deactivate FE
+BE -> DB: Mencari data user berdasarkan email
+deactivate BE
+
+alt User sudah terdaftar
+    activate DB
+    DB --> BE: User found (is_verified = true)
+    deactivate DB
+
+    activate BE
+    BE -> DB: perbarui data user_role
+    activate DB
+    DB --> BE: OK (role assigned)
+    deactivate DB
+
+    activate FE
+    BE --> FE: 200 OK (User data, Auth token)
+    deactivate BE
+    FE -> FE: Simpan Auth token dan user data
+    activate FE #LightBlue
+    deactivate FE
+    
+    FE -> User: Mengarahkan ke dashboard
+    deactivate FE
+
+else User belum terdaftar
+    activate DB
+    DB --> BE: User not found
+    deactivate DB
+    activate BE
+    BE -> DB: Membuat data user baru dengan is_verified=true
+    activate DB
+    DB --> BE: OK (User created)
+    deactivate DB
+
+    BE -> BE: Menetapkan role adopter dan provider
+    activate BE #LightBlue
+    deactivate BE
+
+    BE -> DB: perbarui data user_role
+    activate DB
+    DB --> BE: OK (role assigned)
+    deactivate DB
+
+    activate FE
+    BE --> FE: 201 Created (User data, Auth token)
+    deactivate BE
+    FE -> FE: Simpan Auth token dan user data
+    activate FE #LightBlue
+    deactivate FE
+    deactivate BE
+    FE -> User: Mengarahkan ke dashboard (verified)
+    deactivate FE
+end
+@enduml

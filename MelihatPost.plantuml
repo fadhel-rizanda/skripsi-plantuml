@@ -1,0 +1,136 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor User
+participant "Next.js Community Page" as FE
+participant "Laravel PostController" as BE_Post
+participant "Laravel FilterController" as BE_Filter
+participant "Redis (Cache)" as Redis
+database "PostgreSQL (DB)" as DB
+
+' === Normal Flow: Melihat Daftar Post ===
+User -> FE: Klik menu "Community" pada navbar
+activate FE
+
+' --- Paralel Request ---
+par Ambil daftar postingan
+    FE -> BE_Post: GET /api/posts
+    deactivate FE
+    activate BE_Post
+    BE_Post -> DB: Mengambil semua data post
+    activate DB
+    DB --> BE_Post: Return list of posts / null
+    deactivate DB
+
+    alt Data post berhasil dimuat
+        BE_Post --> FE: 200 OK (List of posts)
+        activate FE
+        FE -> User: Tampilkan daftar postingan
+        deactivate FE
+    else Gagal memuat data post
+        BE_Post --> FE: 500 Internal Server Error ("Failed to load posts")
+        deactivate BE_Post
+        activate FE
+        FE -> User: Tampilkan pesan error "Failed to load posts"
+    end
+
+else Ambil data filter (kategori, tag, dll.)
+    FE -> BE_Filter: GET /api/post-filters
+    activate BE_Filter
+    BE_Filter -> Redis: GET cache:post_filters
+    activate Redis
+
+    alt Cache tersedia
+        Redis --> BE_Filter: Return cached filters
+        BE_Filter --> FE: 200 OK (Cached filters)
+        deactivate BE_Filter
+    else Cache kosong / expired
+        Redis --> BE_Filter: Cache miss
+        deactivate Redis
+        activate BE_Filter
+        BE_Filter -> DB: Mengambil semua data filter dari tabel referensi
+        activate DB
+        DB --> BE_Filter: Return filter data
+        deactivate DB
+        BE_Filter -> Redis: SET cache:post_filters (data, expired 1 jam)
+        activate Redis
+        Redis --> BE_Filter: OK
+        deactivate Redis
+        BE_Filter --> FE: 200 OK (Filters from DB)
+        deactivate BE_Filter
+    end
+    FE -> FE:Simpan filter di FE
+    activate FE #LightBlue
+    deactivate FE #LightBlue
+end
+
+activate FE
+FE -> User: Tampilkan daftar postingan & opsi filter
+deactivate FE
+
+
+' === Flow: Menggunakan Pencarian / Filter ===
+User -> FE: Masukkan kata kunci atau filter (kategori, tag, user)
+activate FE
+FE -> BE_Post: GET /api/posts?filter=...
+deactivate FE
+activate BE_Post
+BE_Post -> DB: Mengambil semua data post berdasarkan filter
+activate DB
+DB --> BE_Post: Return filtered posts / null
+deactivate DB
+BE_Post --> FE: 200 OK (Filtered posts)
+deactivate BE_Post
+activate FE
+FE -> User: Tampilkan hasil pencarian / filter
+deactivate FE
+
+' === Flow: Melihat Detail Post ===
+User -> FE: Klik salah satu postingan dari daftar
+activate FE
+FE -> BE_Post: GET /api/posts/{post_id}
+deactivate FE
+activate BE_Post
+BE_Post -> DB: Mengambil data post berdasarkan post_id
+activate DB
+DB --> BE_Post: Return post detail / null
+deactivate DB
+
+alt Post ditemukan
+    BE_Post --> FE: 200 OK (Post detail)
+    deactivate BE_Post
+    activate FE
+    FE -> User: Tampilkan halaman detail postingan
+    deactivate FE
+
+    ' === Subflow: Menampilkan Komentar ===
+    FE -> BE_Post: GET /api/posts/{post_id}/comments
+    activate BE_Post
+    BE_Post -> DB: Mengambil semua data komentar berdasarkan post_id
+    activate DB
+    DB --> BE_Post: Return list of comments
+    deactivate DB
+    BE_Post --> FE: 200 OK (Comments list)
+    deactivate BE_Post
+    activate FE
+    FE -> User: Tampilkan komentar & opsi interaksi (like, reply, share)
+    deactivate FE
+
+else Post tidak ditemukan / telah dihapus
+    BE_Post --> FE: 404 Not Found ("Post not found")
+    deactivate BE_Post
+    activate FE
+    FE -> User: Tampilkan pesan error "Post not found"
+    deactivate FE
+end
+@enduml

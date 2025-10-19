@@ -1,0 +1,73 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+
+' === Participants ===
+actor User
+participant "Next.js Navbar (Notification Icon)" as FE
+participant "Laravel NotificationController" as BE
+database "PostgreSQL (DB)" as DB
+
+
+' === Normal Flow: Melihat Daftar Notifikasi ===
+User -> FE: Klik ikon lonceng pada navbar
+activate FE
+FE -> BE: GET /api/notifications
+deactivate FE
+activate BE
+BE -> DB: Ambil daftar notifikasi berdasarkan user_id (ORDER BY created_at DESC LIMIT 20)
+activate DB
+DB --> BE: Return list of notifications / null
+deactivate DB
+
+alt Notifikasi tersedia
+    BE --> FE: 200 OK (List of notifications)
+    activate FE
+    FE -> User: Tampilkan drawer berisi daftar notifikasi
+    deactivate FE
+else Tidak ada notifikasi baru
+    BE --> FE: 200 OK (Empty list)
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan "No new notifications"
+    deactivate FE
+
+end
+
+' === Subflow S-1: Membuka Notifikasi ===
+User -> FE: Klik salah satu notifikasi dari daftar
+activate FE
+FE -> BE: PATCH /api/notifications/{notification_id}/read
+deactivate FE
+activate BE
+BE -> DB: Update notifications SET status = 'read' WHERE id = {notification_id}
+activate DB
+alt Berhasil update
+    DB --> BE: OK (updated)
+    BE --> FE: 200 OK ("Notification marked as read")
+    deactivate BE
+    activate FE
+    FE -> User: Tandai notifikasi sebagai terbaca dan arahkan ke halaman terkait
+    deactivate FE
+else Gagal update notifikasi
+    DB --> BE: Error (Update failed / DB unreachable)
+    deactivate DB
+    activate BE
+    BE --> FE: 500 Internal Server Error ("Failed to update notification status")
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan error "Gagal menandai notifikasi sebagai terbaca"
+    deactivate FE
+end
+
+
+@enduml

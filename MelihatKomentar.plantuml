@@ -1,0 +1,42 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor User
+participant "Next.js Post Detail Page" as FE
+participant "Laravel CommentController" as BE
+database "PostgreSQL (DB)" as DB
+
+' === Normal Flow: Melihat Komentar ===
+User -> FE: Buka halaman detail postingan
+activate FE
+FE -> BE: GET /api/posts/{post_id}/comments
+deactivate FE
+activate BE
+BE -> DB: Mengambil komentar berdasarkan post_id
+activate DB
+DB --> BE: Return list of comments / null
+deactivate DB
+
+alt Komentar tersedia
+    BE --> FE: 200 OK (List of comments)
+    activate FE
+    FE -> User: Tampilkan daftar komentar dan balasan
+    deactivate FE
+else Tidak ada komentar
+    BE --> FE: 200 OK (Empty list)
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan "No comments yet"
+    deactivate FE
+end
+@enduml

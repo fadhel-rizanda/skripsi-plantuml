@@ -1,0 +1,44 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor User
+participant "Next.js Profile Page" as FE
+participant "Laravel ProfileController" as BE
+database "PostgreSQL (DB)" as DB
+
+' === Normal Flow: Melihat Profil ===
+User -> FE: Klik foto profil (navbar / profil pengguna lain)
+activate FE
+FE -> BE: GET /api/profile/{user_id}
+deactivate FE
+activate BE
+
+BE -> DB: Mencari data user berdasarkan id
+activate DB
+DB --> BE: Return profile data / null
+deactivate DB
+
+alt Profil ditemukan
+    BE --> FE: 200 OK (Profile data)
+    activate FE
+    FE -> User: Tampilkan halaman profil dengan informasi lengkap
+    deactivate FE
+
+else Profil tidak ditemukan / user dihapus
+    BE --> FE: 404 Not Found ("Profile not found")
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan error "Profile not found"
+    deactivate FE
+end
+@enduml
