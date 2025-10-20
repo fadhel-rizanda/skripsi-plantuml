@@ -1,0 +1,109 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor Admin
+participant "Next.js Users Page" as FE
+participant "Laravel UserController" as BE
+database "PostgreSQL (DB)" as DB
+participant "Notification Service" as NS
+participant "Email Service" as ES
+participant "Next.js (User)" as FE_User
+
+' === Akses Data Pengguna ===
+    Admin -> FE: Klik menu "Users" pada navbar
+    activate FE
+    FE -> BE: GET /api/users
+    activate BE
+    BE -> DB: Ambil daftar seluruh pengguna beserta status
+    activate DB
+    DB --> BE: Return list of users
+    deactivate DB
+    BE --> FE: 200 OK (Daftar pengguna)
+    deactivate BE
+    FE -> Admin: Tampilkan tabel daftar pengguna dengan status terkini
+    deactivate FE
+
+' === Proses Penonaktifan Akun ===
+    Admin -> FE: Klik tombol "Deactivate" pada kolom Action
+    activate FE
+
+    ' === Validasi di frontend ===
+    FE -> FE: Validasi status akun (aktif dan dapat dinonaktifkan)
+    activate FE #LightBlue
+    deactivate FE #LightBlue
+
+    FE -> Admin: Tampilkan pop-up konfirmasi penonaktifan akun pengguna
+    deactivate FE
+
+    alt Admin konfirmasi "Continue"
+        Admin -> FE: Klik "Continue"
+        activate FE
+        FE -> BE: PUT /api/users/{id}/deactivate
+        activate BE
+        BE -> DB: Update status akun pengguna menjadi "Deactivated"
+        activate DB
+
+        alt Penonaktifan berhasil
+            DB --> BE: OK (Status updated)
+            BE --> FE: 200 OK ("User account deactivated successfully")
+
+            FE -> FE: Perbarui daftar pengguna di UI
+            activate FE #LightBlue
+            deactivate FE #LightBlue
+
+            FE -> Admin: Tampilkan toast "User account deactivated successfully"
+            deactivate FE
+
+            ' === Kirim notifikasi ke pengguna terkait ===
+            BE -> NS: Kirim notifikasi ke pengguna yang dinonaktifkan
+            activate NS
+            BE -> ES: Kirim email notifikasi penonaktifan akun
+            deactivate BE
+            activate ES
+            ES -> ES: Kirim email ke alamat email pengguna
+            activate ES #LightBlue
+            deactivate ES #LightBlue
+            deactivate ES
+
+            NS -> FE_User: "Your account has been deactivated by admin"
+            deactivate NS
+
+
+            activate FE_User
+            FE_User -> FE_User: Tampilkan notifikasi "Your account has been deactivated"
+            activate FE_User #LightBlue
+            deactivate FE_User #LightBlue
+            FE_User -> FE_User: Logout dan redirect ke halaman login
+            activate FE_User #LightBlue
+            deactivate FE_User #LightBlue
+            deactivate FE_User
+
+        else Gagal memperbarui status
+            DB --> BE: Error (Update failed)
+            deactivate DB
+            activate BE
+            BE --> FE: 500 Internal Server Error ("Failed to deactivate account")
+            deactivate BE
+            activate FE
+            FE -> Admin: Tampilkan toast "Failed to terminate account. Please try again"
+            deactivate FE
+        end
+
+    else Admin membatalkan konfirmasi
+        Admin -> FE: Klik "Cancel"
+        activate FE
+        FE -> Admin: Tutup pop-up, data pengguna tetap tersimpan
+        deactivate FE
+    end
+
+@enduml

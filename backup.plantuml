@@ -1,0 +1,140 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+
+' === Participants ===
+actor User
+participant "Next.js Post Detail Page" as FE
+participant "Laravel CommentController" as BE
+database "PostgreSQL (DB)" as DB
+
+
+' === Normal Flow: Membuka Halaman Komentar ===
+User -> FE: Buka halaman detail postingan
+activate FE
+FE -> BE: GET /api/posts/{post_id}/comments
+deactivate FE
+activate BE
+BE -> DB: Menampilkan semua komentar berdasarkan post_id
+activate DB
+DB --> BE: Return list of comments
+deactivate DB
+BE --> FE: 200 OK (Comments list)
+deactivate BE
+activate FE
+FE -> User: Tampilkan daftar komentar
+deactivate FE
+
+
+' === Flow 3: Menambah Komentar Baru ===
+User -> FE: Ketik komentar dan klik "Send"
+activate FE
+FE -> BE: POST /api/comments (body: {post_id, content})
+deactivate FE
+activate BE
+BE -> DB: Menyimpan data komentar dengan post_id
+activate DB
+DB --> BE: OK (Comment saved)
+deactivate DB
+BE --> FE: 201 Created ("Comment added")
+activate FE
+FE -> User: Tambahkan komentar baru ke daftar
+deactivate FE
+
+' --- Alternate 3e: Gagal Menambah Komentar ---
+alt Gagal menyimpan komentar
+    BE --> FE: 400 Bad Request / 500 Internal Server Error ("Failed to post comment")
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan error "Failed to post comment"
+    deactivate FE
+end
+
+
+
+' === Flow 4: Membalas Komentar ===
+User -> FE: Klik "Reply" dan kirim balasan
+activate FE
+FE -> BE: POST /api/comments (body: {post_id, parent_id, content})
+deactivate FE
+activate BE
+BE -> DB: Menyimpan data komentar dengan post_id dan parent_id
+activate DB
+DB --> BE: OK (Reply saved)
+deactivate DB
+
+alt Balasan berhasil disimpan
+    BE --> FE: 201 Created ("Reply added")
+    activate FE
+    FE -> User: Tampilkan balasan di bawah komentar induk
+    deactivate FE
+else Gagal menyimpan balasan
+    BE --> FE: 400 Bad Request / 500 Internal Server Error ("Failed to post reply")
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan error "Failed to post reply"
+    deactivate FE
+end
+
+
+' === Flow 5: Mengedit Komentar ===
+User -> FE: Klik ikon pensil, ubah teks, lalu klik "Save"
+activate FE
+FE -> BE: PUT /api/comments/{comment_id} (body: {content})
+deactivate FE
+activate BE
+BE -> DB: Memperbarui komentar
+activate DB
+DB --> BE: OK (Comment updated)
+deactivate DB
+BE --> FE: 200 OK ("Comment updated")
+activate FE
+FE -> User: Perbarui tampilan komentar
+deactivate FE
+
+' --- Alternate 5e: Gagal Edit Komentar ---
+alt Gagal memperbarui komentar
+    BE --> FE: 400 Bad Request / 500 Internal Server Error ("Failed to update comment")
+deactivate BE
+
+    activate FE
+    FE -> User: Tampilkan pesan error "Failed to update comment"
+    deactivate FE
+end
+
+
+' === Flow 6: Menghapus Komentar ===
+User -> FE: Klik ikon tempat sampah dan konfirmasi hapus
+activate FE
+FE -> BE: DELETE /api/comments/{comment_id}
+deactivate FE
+activate BE
+BE -> DB: DELETE FROM comments WHERE id = {comment_id} AND user_id = {user_id}
+activate DB
+DB --> BE: OK (Comment deleted)
+deactivate DB
+BE --> FE: 200 OK ("Comment deleted")
+activate FE
+FE -> User: Hapus komentar dari daftar
+deactivate FE
+
+' --- Alternate 6e: Gagal Hapus Komentar ---
+alt Gagal menghapus komentar
+    BE --> FE: 500 Internal Server Error ("Failed to delete comment")
+deactivate BE
+
+    activate FE
+    FE -> User: Tampilkan pesan error "Failed to delete comment"
+    deactivate FE
+end
+
+@enduml

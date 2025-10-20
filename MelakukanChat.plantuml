@@ -1,0 +1,126 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor User as Pengguna
+participant "Next.js Chat Page" as FE
+participant "Laravel ChatController" as BE
+participant "Laravel Reverb" as Reverb
+database "PostgreSQL (DB)" as DB
+participant "Next.js Chat (Penerima)" as FE_Receiver
+
+' === Flow: Membuka Chat Room ===
+Pengguna -> FE: Klik "Chat Provider" / "Chat Adopter"
+activate FE
+FE -> BE: POST /api/chat/rooms {receiver_id}
+deactivate FE
+activate BE
+BE -> DB: Cari chat room berdasarkan kedua user_id
+activate DB
+DB --> BE: Return chat room / null
+deactivate DB
+
+alt Chat room sudah ada
+    BE --> FE: 200 OK (Chat room detail)
+else Chat room belum ada
+    BE -> DB: Buat chat room baru dengan kedua user_id
+    activate DB
+
+    alt Room berhasil dibuat
+        DB --> BE: OK (Chat room created)
+        BE --> FE: 201 Created (New chat room detail)
+        deactivate BE
+
+    else Gagal membuat room (DB error)
+        DB --> BE: Error response
+        deactivate DB
+        activate BE
+        BE --> FE: 500 Internal Server Error ("Failed to create chat room")
+        deactivate BE
+        activate FE
+        FE -> Pengguna: Tampilkan pesan error "Chat unavailable. Please try again."
+        deactivate FE
+    end
+end
+
+activate FE
+FE -> BE: GET /api/chat/rooms/{room_id}/messages
+deactivate FE
+activate BE
+BE -> DB: Ambil riwayat pesan dari room_id
+activate DB
+DB --> BE: Return list of messages
+deactivate DB
+BE --> FE: 200 OK (Message history)
+deactivate BE
+
+activate FE
+FE -> Reverb: Subscribe ke channel "chat.{room_id}"
+activate Reverb
+Reverb --> FE: Subscribed
+deactivate Reverb
+FE -> Pengguna: Tampilkan halaman percakapan dengan riwayat pesan
+deactivate FE
+
+
+' === Flow: Mengirim Pesan ===
+Pengguna -> FE: Ketik dan kirim pesan
+activate FE
+FE -> BE: POST /api/chat/messages {room_id, message}
+deactivate FE
+activate BE
+
+BE -> BE: Validasi input (message tidak kosong, room_id valid)
+activate BE #LightBlue
+deactivate BE #LightBlue
+
+alt Validasi gagal
+    BE --> FE: 400 Bad Request ("Validation error")
+    activate FE
+    FE -> Pengguna: Tampilkan pesan error "Message cannot be empty"
+    deactivate FE
+else Validasi berhasil
+    BE -> DB: Simpan pesan ke tabel messages
+    activate DB
+
+    alt Pesan berhasil disimpan
+        DB --> BE: OK (Message saved)
+
+        BE -> Reverb: Broadcast event "MessageSent" ke channel "chat.{room_id}"
+        activate Reverb
+        Reverb -> FE_Receiver: Push message event ke penerima
+        activate FE_Receiver
+        FE_Receiver -> FE_Receiver: Update chat UI dengan pesan baru
+        activate FE_Receiver #LightBlue
+        deactivate FE_Receiver #LightBlue
+        deactivate FE_Receiver
+        Reverb --> BE: Event broadcasted
+        deactivate Reverb
+
+        BE --> FE: 200 OK (Message sent)
+        deactivate BE
+        activate FE
+        FE -> Pengguna: Tampilkan pesan di chat UI (status: sent)
+        deactivate FE
+
+    else Gagal menyimpan pesan (DB error)
+        DB --> BE: Error response
+        deactivate DB
+        activate BE
+        BE --> FE: 500 Internal Server Error ("Failed to send message")
+        activate FE
+        FE -> Pengguna: Tampilkan pesan error "Failed to send message. Please try again."
+        deactivate FE
+    end
+end
+
+@enduml

@@ -1,0 +1,76 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor "Penyedia Hewan" as Provider
+participant "Adoption Page (FE)" as FE
+participant "AdoptionController (BE)" as BE
+database "PostgreSQL (DB)" as DB
+
+' === Flow: Menyetujui Proses Adopsi ===
+Provider -> FE: Buka halaman "Adoption Process"
+activate FE
+FE -> BE: Request daftar proses adopsi
+deactivate FE
+activate BE
+BE -> DB: Ambil semua proses adopsi milik penyedia
+activate DB
+DB --> BE: Daftar proses adopsi ditemukan
+deactivate DB
+BE --> FE: Kirim daftar proses adopsi
+deactivate BE
+activate FE
+FE -> Provider: Tampilkan daftar proses adopsi
+deactivate FE
+
+Provider -> FE: Pilih salah satu proses adopsi
+activate FE
+FE -> BE: Minta detail proses adopsi
+deactivate FE
+activate BE
+BE -> DB: Ambil detail proses adopsi berdasarkan ID
+activate DB
+DB --> BE: Data detail proses adopsi
+deactivate DB
+BE --> FE: Kirim detail proses adopsi
+deactivate BE
+activate FE
+FE -> Provider: Tampilkan tahapan proses adopsi
+deactivate FE
+
+Provider -> FE: Klik checkbox "I confirm the handover is complete"
+activate FE
+FE -> BE: Kirim permintaan finalisasi proses adopsi
+deactivate FE
+activate BE
+BE -> DB: Perbarui status proses adopsi menjadi "Ready for Admin Finalization"
+activate DB
+
+alt Gagal memperbarui status
+    DB --> BE: Gagal memperbarui data
+    BE --> FE: Respon gagal ("Failed to update adoption status")
+    deactivate BE
+    activate FE
+    FE -> Provider: Tampilkan pesan error
+    deactivate FE
+else Berhasil memperbarui status
+    DB --> BE: Status berhasil diperbarui
+    deactivate DB
+    activate BE
+    BE --> FE: Respon sukses ("Adoption approved")
+    deactivate BE
+    activate FE
+    FE -> Provider: Tampilkan status baru "Ready for Admin Finalization"
+    deactivate FE
+end
+
+@enduml

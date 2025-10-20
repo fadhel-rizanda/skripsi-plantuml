@@ -1,0 +1,149 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor Admin
+actor "Penyedia Hewan" as Provider
+participant "Next.js Pets Page" as FE
+participant "Laravel PetController" as BE
+database "PostgreSQL (DB)" as DB
+participant "Notification Service" as NS
+participant "Next.js (Penyedia)" as FE_Provider
+
+' === Flow A: Admin Menghapus Hewan ===
+group Admin Menghapus Hewan
+    Admin -> FE: Klik menu "Pets" pada navbar
+    activate FE
+    FE -> BE: GET /api/pets
+    activate BE
+    BE -> DB: Ambil daftar semua hewan
+    activate DB
+    DB --> BE: Return list of pets
+    deactivate DB
+    BE --> FE: 200 OK (Daftar hewan)
+    deactivate BE
+    FE -> Admin: Tampilkan tabel daftar hewan
+    deactivate FE
+
+    Admin -> FE: Klik tombol "Takedown" pada hewan tertentu
+    activate FE
+    FE -> Admin: Tampilkan pop-up konfirmasi penghapusan
+    deactivate FE
+
+    alt Admin konfirmasi "Continue"
+        Admin -> FE: Klik "Continue"
+        activate FE
+        FE -> BE: DELETE /api/pets/{id}
+        activate BE
+        BE -> DB: Hapus data hewan berdasarkan ID
+        activate DB
+
+        alt Penghapusan berhasil
+            DB --> BE: OK (Row deleted)
+            BE --> FE: 200 OK ("Pet deleted successfully")
+            FE -> FE: Perbarui daftar hewan di UI
+            activate FE #LightBlue
+            deactivate FE #LightBlue
+            FE -> Admin: Tampilkan toast "Pet deleted successfully"
+            deactivate FE
+
+            ' Kirim notifikasi ke Penyedia Hewan
+            BE -> NS: Kirim notifikasi ke penyedia hewan
+            deactivate BE
+            activate NS
+            NS -> FE_Provider: "Your pet has been taken down by admin"
+            deactivate NS
+            activate FE_Provider
+            FE_Provider -> FE_Provider: Tampilkan toast notifikasi "Your pet has been taken down"
+            activate FE_Provider #LightBlue
+            deactivate FE_Provider #LightBlue
+            deactivate FE_Provider
+
+        else Gagal menghapus data
+            DB --> BE: Error (Deletion failed)
+            deactivate DB
+            activate BE
+            BE --> FE: 500 Internal Server Error ("Failed to delete pet")
+            deactivate BE
+            activate FE
+            FE -> Admin: Tampilkan toast "Failed to delete pet. Please try again."
+            deactivate FE
+        end
+
+    else Admin membatalkan konfirmasi
+        Admin -> FE: Klik "Cancel"
+        activate FE
+        FE -> Admin: Tutup pop-up tanpa aksi
+        deactivate FE
+    end
+end
+
+|||
+
+' === Flow B: Penyedia Hewan Menghapus Hewan ===
+group Penyedia Hewan Menghapus Hewan
+    Provider -> FE: Buka halaman detail hewan
+    activate FE
+    FE -> BE: GET /api/pets/{id}
+    activate BE
+    BE -> DB: Ambil detail hewan berdasarkan ID
+    activate DB
+    DB --> BE: Return pet details
+    deactivate DB
+    BE --> FE: 200 OK (Pet details)
+    deactivate BE
+    FE -> Provider: Tampilkan detail hewan (dengan tombol "Takedown")
+    deactivate FE
+
+    Provider -> FE: Klik tombol "Takedown"
+    activate FE
+    FE -> Provider: Tampilkan pop-up konfirmasi
+    deactivate FE
+
+    alt Provider konfirmasi "Continue"
+        Provider -> FE: Klik "Continue"
+        activate FE
+        FE -> BE: DELETE /api/pets/{id}
+        activate BE
+        BE -> DB: Hapus data hewan berdasarkan ID
+        activate DB
+
+        alt Penghapusan berhasil
+            DB --> BE: OK (Row deleted)
+            BE --> FE: 200 OK ("Pet deleted successfully")
+            deactivate BE
+            FE -> FE: Redirect ke halaman daftar hewan
+            activate FE #LightBlue
+            deactivate FE #LightBlue
+            FE -> Provider: Tampilkan toast "Pet deleted successfully"
+            deactivate FE
+
+        else Gagal menghapus data
+            DB --> BE: Error (Deletion failed)
+            activate BE
+            deactivate DB
+            BE --> FE: 500 Internal Server Error ("Failed to delete pet")
+            deactivate BE
+            activate FE
+            FE -> Provider: Tampilkan toast "Failed to delete pet. Please try again."
+            deactivate FE
+        end
+
+    else Provider membatalkan konfirmasi
+        Provider -> FE: Klik "Cancel"
+        activate FE
+        FE -> Provider: Tutup pop-up tanpa aksi
+        deactivate FE
+    end
+end
+
+@enduml

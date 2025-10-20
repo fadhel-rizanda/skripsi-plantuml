@@ -56,10 +56,10 @@ else Valid input
     deactivate Mailer
     activate FE
     BE --> FE: 201 Created (User data, Auth token, OTP sent)
+    deactivate BE
     FE -> FE: Simpan Auth token dan user data
     activate FE #LightBlue
     deactivate FE #LightBlue
-    deactivate BE
     FE -> User: Tampilkan halaman aktivasi akun (input kode OTP / pilihan Verify Later)
     deactivate FE
     deactivate FE

@@ -1,0 +1,69 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor User as Pengguna
+participant "Next.js Content Page" as FE
+participant "Laravel ReportController" as BE
+database "PostgreSQL (DB)" as DB
+
+' === Flow: Melakukan Report Pelanggaran Konten ===
+Pengguna -> FE: Klik ikon menu (⋮) pada konten
+activate FE
+FE -> Pengguna: Tampilkan menu opsi (Report Content, Share, dll.)
+deactivate FE
+
+Pengguna -> FE: Pilih "Report Content"
+activate FE
+FE -> Pengguna: Tampilkan form laporan (alasan, deskripsi)
+deactivate FE
+
+Pengguna -> FE: Isi form dan klik "Submit Report"
+activate FE
+FE -> BE: POST /api/reports {content_id, reason, description}
+deactivate FE
+activate BE
+
+' === Validasi Data ===
+BE -> BE: Validasi input (alasan wajib, deskripsi, content_id valid)
+activate BE #LightBlue
+deactivate BE #LightBlue
+
+alt Validasi berhasil
+    BE -> DB: Simpan laporan ke tabel reports
+    activate DB
+
+    alt Laporan berhasil disimpan
+        DB --> BE: OK (Report saved)
+        BE --> FE: 200 OK ("Report submitted successfully")
+        activate FE
+        FE -> Pengguna: Tampilkan pesan "Thank you for your report. We'll review it soon."
+        deactivate FE
+
+    else Gagal menyimpan laporan (DB error)
+        DB --> BE: Error response
+        deactivate DB
+        BE --> FE: 500 Internal Server Error ("Failed to submit report")
+        activate FE
+        FE -> Pengguna: Tampilkan pesan error "Failed to submit report. Please try again."
+        deactivate FE
+    end
+
+else Validasi gagal
+    BE --> FE: 400 Bad Request ("Validation error")
+    deactivate BE
+    activate FE
+    FE -> Pengguna: Tampilkan pesan error sesuai field yang bermasalah
+    deactivate FE
+end
+
+@enduml

@@ -1,0 +1,110 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor "Penyedia Hewan" as Provider
+participant "Next.js Adoption Page" as FE
+participant "Laravel RequirementController" as BE
+database "PostgreSQL (DB)" as DB
+participant "Notification Service" as NS
+participant "Next.js (Calon Pengadopsi)" as FE_Adopter
+
+' === Flow: Membuka Proses Adopsi ===
+Provider -> FE: Buka halaman "Adoption Process"
+activate FE
+FE -> BE: GET /api/adoptions
+deactivate FE
+activate BE
+BE -> DB: Ambil daftar proses adopsi aktif
+activate DB
+DB --> BE: Return list of adoption processes
+deactivate DB
+BE --> FE: 200 OK (Daftar proses adopsi)
+deactivate BE
+activate FE
+FE -> Provider: Tampilkan daftar proses adopsi
+deactivate FE
+
+Provider -> FE: Pilih salah satu proses adopsi
+activate FE
+FE -> BE: GET /api/adoptions/{id}
+deactivate FE
+activate BE
+BE -> DB: Ambil detail proses adopsi
+activate DB
+DB --> BE: Return adoption detail
+deactivate DB
+BE --> FE: 200 OK (Detail proses adopsi)
+deactivate BE
+activate FE
+FE -> Provider: Tampilkan tab "Application Reviewed"
+deactivate FE
+
+
+' === Flow: Menentukan Requirement ===
+Provider -> FE: Klik tombol "Set Requirement"
+activate FE
+FE -> FE: Tampilkan modal input (Name, Notes)
+activate FE #LightBlue
+deactivate FE #LightBlue
+
+Provider -> FE: Isi requirement dan tekan "Save"
+FE -> BE: POST /api/requirements {requirements[]}
+deactivate FE
+activate BE
+
+BE -> BE: Validasi data requirement (Name wajib diisi)
+activate BE #LightBlue
+deactivate BE #LightBlue
+
+alt Validasi gagal
+    BE --> FE: 400 Bad Request ("Validation error")
+    activate FE
+    FE -> Provider: Tampilkan pesan error "Requirement name cannot be empty"
+    deactivate FE
+
+else Validasi berhasil
+    BE -> DB: Simpan semua requirement ke tabel requirements
+    activate DB
+
+    alt Berhasil menyimpan requirement
+        DB --> BE: OK (Requirements saved)
+        BE --> FE: 201 Created (Daftar requirement terbaru)
+        activate FE
+        FE -> Provider: Tampilkan requirement yang telah ditentukan
+        deactivate FE
+
+        BE -> NS: Kirim notifikasi ke calon pengadopsi
+        deactivate BE
+
+        activate NS
+        NS -> FE_Adopter: "Requirements set by provider"
+        deactivate NS
+        activate FE_Adopter
+        FE_Adopter -> FE_Adopter: Menampilkan toast notifikasi "Requirements set by provider""
+        activate FE_Adopter #LightBlue
+        deactivate FE_Adopter #LightBlue
+        deactivate FE_Adopter
+
+    else Gagal menyimpan requirement (DB error)
+        DB --> BE: Error response (e.g., constraint violation / connection failure)
+        deactivate DB
+        activate BE
+        BE --> FE: 500 Internal Server Error ("Failed to set requirements")
+        deactivate BE
+        activate FE
+        FE -> Provider: Tampilkan pesan error "Failed to set requirements. Please try again."
+        deactivate FE
+    end
+end
+
+@enduml

@@ -1,0 +1,151 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor Admin
+actor User
+participant "Next.js Posts Page" as FE
+participant "Laravel PostController" as BE
+database "PostgreSQL (DB)" as DB
+participant "Notification Service" as NS
+participant "Next.js (Creator)" as FE_Creator
+
+' === Flow A: Admin Menghapus Post ===
+group Admin Menghapus Post
+    Admin -> FE: Klik menu "Posts" pada navbar
+    activate FE
+    FE -> BE: GET /api/posts
+    activate BE
+    BE -> DB: Ambil daftar seluruh post
+    activate DB
+    DB --> BE: Return list of posts
+    deactivate DB
+    BE --> FE: 200 OK (Daftar post)
+    deactivate BE
+    FE -> Admin: Tampilkan tabel daftar post dengan status terkini
+    deactivate FE
+
+    Admin -> FE: Klik tombol "Takedown" pada post tertentu
+    activate FE
+    FE -> Admin: Tampilkan pop-up konfirmasi penghapusan post
+    deactivate FE
+
+    alt Admin konfirmasi "Continue"
+        Admin -> FE: Klik "Continue"
+        activate FE
+        FE -> BE: DELETE /api/posts/{id}
+        activate BE
+        BE -> DB: Hapus data post berdasarkan ID
+        activate DB
+
+        alt Penghapusan berhasil
+            DB --> BE: OK (Row deleted)
+            BE --> FE: 200 OK ("Post deleted successfully")
+            FE -> FE: Perbarui daftar post di UI
+            activate FE #LightBlue
+            deactivate FE #LightBlue
+            FE -> Admin: Tampilkan toast "Post deleted successfully"
+            deactivate FE
+
+            ' Kirim notifikasi ke Creator post
+            BE -> NS: Kirim notifikasi ke creator post
+            deactivate BE
+            activate NS
+            NS -> FE_Creator: "Your post has been taken down by admin"
+            deactivate NS
+            activate FE_Creator
+            FE_Creator -> FE_Creator: Tampilkan toast notifikasi "Your post has been taken down"
+            activate FE_Creator #LightBlue
+            deactivate FE_Creator #LightBlue
+            deactivate FE_Creator
+
+        else Gagal menghapus data
+            DB --> BE: Error (Deletion failed)
+            deactivate DB
+            activate BE
+            BE --> FE: 500 Internal Server Error ("Failed to delete post")
+            deactivate BE
+            activate FE
+            FE -> Admin: Tampilkan toast "Failed to delete post. Please try again."
+            deactivate FE
+        end
+
+    else Admin membatalkan konfirmasi
+        Admin -> FE: Klik "Cancel"
+        activate FE
+        FE -> Admin: Tutup pop-up, data post tetap tersimpan
+        deactivate FE
+    end
+end
+
+
+' === Flow B: User Menghapus Post ===
+group User Menghapus Post
+    User -> FE: Buka halaman detail post
+    activate FE
+    FE -> BE: GET /api/posts/{id}
+    activate BE
+    BE -> DB: Ambil detail post berdasarkan ID
+    activate DB
+    DB --> BE: Return post details
+    deactivate DB
+    BE --> FE: 200 OK (Post details)
+    deactivate BE
+    FE -> FE: Cek apakah creator = user saat ini
+    activate FE #LightBlue
+    deactivate FE #LightBlue
+    FE -> User: Tampilkan detail post (dengan tombol "Takedown" jika creator)
+    deactivate FE
+
+    User -> FE: Klik tombol "Takedown"
+    activate FE
+    FE -> User: Tampilkan pop-up konfirmasi penghapusan
+    deactivate FE
+
+    alt User konfirmasi "Continue"
+        User -> FE: Klik "Continue"
+        activate FE
+        FE -> BE: DELETE /api/posts/{id}
+        activate BE
+        BE -> DB: Hapus data post berdasarkan ID
+        activate DB
+
+        alt Penghapusan berhasil
+            DB --> BE: OK (Row deleted)
+            BE --> FE: 200 OK ("Post deleted successfully")
+            deactivate BE
+            FE -> FE: Redirect ke halaman daftar post
+            activate FE #LightBlue
+            deactivate FE #LightBlue
+            FE -> User: Tampilkan toast "Post deleted successfully"
+            deactivate FE
+
+        else Gagal menghapus data
+            DB --> BE: Error (Deletion failed)
+            deactivate DB
+            activate BE
+            BE --> FE: 500 Internal Server Error ("Failed to delete post")
+            deactivate BE
+            activate FE
+            FE -> User: Tampilkan toast "Failed to delete post. Please try again."
+            deactivate FE
+        end
+
+    else User membatalkan konfirmasi
+        User -> FE: Klik "Cancel"
+        activate FE
+        FE -> User: Tutup pop-up, data post tetap tersimpan
+        deactivate FE
+    end
+end
+
+@enduml

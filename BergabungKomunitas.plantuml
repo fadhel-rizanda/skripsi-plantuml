@@ -1,0 +1,92 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor "User" as Pengguna
+participant "Next.js Community Page" as FE
+participant "Laravel CommunityController" as BE
+database "PostgreSQL (DB)" as DB
+
+
+' === Flow 1: Membuka Halaman Komunitas ===
+Pengguna -> FE: Buka halaman Community Detail
+activate FE
+FE -> BE: GET /api/communities/{community_id}
+deactivate FE
+activate BE
+BE -> DB: Ambil detail komunitas dan status keanggotaan pengguna berdasarkan community_id
+activate DB
+DB --> BE: Return list of communities
+deactivate DB
+BE --> FE: 200 OK (daftar komunitas)
+deactivate BE
+activate FE
+FE -> Pengguna: Tampilkan detail komunitas beserta informasi keanggotaan
+deactivate FE
+
+
+' === Flow 2: Klik Tombol Join ===
+Pengguna -> FE: Klik tombol "Join Community"
+activate FE
+FE -> BE: POST /api/communities/{community_id}/join
+deactivate FE
+activate BE
+BE -> DB: Tambahkan pengguna ke daftar anggota komunitas
+activate DB
+
+alt Gagal menyimpan data ke DB (constraint / koneksi gagal)
+    DB --> BE: Error (insert failed)
+    BE --> FE: 500 Internal Server Error ("Failed to join community")
+    deactivate BE
+    activate FE
+    FE -> Pengguna: Tampilkan pesan error "Failed to join community"
+    deactivate FE
+else Berhasil menyimpan data
+    DB --> BE: OK (User joined)
+    deactivate DB
+    activate BE
+    BE --> FE: 200 OK ("Successfully joined the community")
+    deactivate BE
+    activate FE
+    FE -> Pengguna: Ubah tombol jadi "Joined"
+    deactivate FE
+end
+
+
+' === Flow 3: Klik Tombol Unjoin ===
+Pengguna -> FE: Klik tombol "Joined" (untuk keluar)
+activate FE
+FE -> BE: DELETE /api/communities/{community_id}/leave
+deactivate FE
+activate BE
+BE -> DB: Hapus pengguna dari daftar anggota komunitas
+activate DB
+
+alt Gagal menghapus data (record tidak ditemukan / koneksi gagal)
+    DB --> BE: Error (delete failed)
+    BE --> FE: 500 Internal Server Error ("Failed to leave community")
+    deactivate BE
+    activate FE
+    FE -> Pengguna: Tampilkan pesan error "Failed to leave community"
+    deactivate FE
+else Berhasil menghapus data
+    DB --> BE: OK (User removed)
+    deactivate DB
+    activate BE
+    BE --> FE: 200 OK ("Successfully left the community")
+    deactivate BE
+    activate FE
+    FE -> Pengguna: Ubah tombol jadi "Join"
+    deactivate FE
+end
+
+@enduml

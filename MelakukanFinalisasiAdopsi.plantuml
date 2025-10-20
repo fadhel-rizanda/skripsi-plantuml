@@ -1,0 +1,135 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor Admin
+participant "Next.js Adoption Process Page" as FE
+participant "Laravel AdoptionProcessController" as BE
+database "PostgreSQL (DB)" as DB
+participant "Notification Service" as NS
+participant "Next.js (Adopter)" as FE_Adopter
+participant "Next.js (Provider)" as FE_Provider
+
+' === Akses Data Proses Adopsi ===
+    alt Flow A: Dari Daftar Proses Adopsi
+        Admin -> FE: Klik menu "Adoption Process" pada navbar
+        activate FE
+        FE -> BE: GET /api/adoptions
+        activate BE
+        BE -> DB: Ambil daftar seluruh proses adopsi
+        activate DB
+        DB --> BE: Return list of adoption processes
+        deactivate DB
+        BE --> FE: 200 OK (Daftar proses adopsi)
+        deactivate BE
+        FE -> Admin: Tampilkan tabel daftar proses adopsi dengan status terkini
+        deactivate FE
+
+    else Flow B: Dari Halaman Detail (Hand Over Day)
+        Admin -> FE: Buka halaman detail proses adopsi
+        activate FE
+        FE -> BE: GET /api/adoptions/{id}
+        activate BE
+        BE -> DB: Ambil detail proses adopsi berdasarkan ID
+        activate DB
+        DB --> BE: Return adoption process details
+        deactivate DB
+        BE --> FE: 200 OK (Adoption process details)
+        deactivate BE
+        FE -> Admin: Tampilkan halaman detail dengan tombol "Complete Adoption"
+        deactivate FE
+    end
+
+' === Proses Finalisasi (Sama untuk Flow A & B) ===
+    alt Flow A: Klik tombol "Approve"
+        Admin -> FE: Klik tombol "Approve" pada kolom Action
+        activate FE
+    else Flow B: Klik tombol "Complete Adoption"
+        Admin -> FE: Klik tombol "Complete Adoption" pada bagian "Hand Over Day"
+    end
+
+    activate FE
+
+    ' === Validasi di frontend ===
+    FE -> FE: Validasi status proses (siap untuk finalisasi)
+    activate FE #LightBlue
+    deactivate FE #LightBlue
+
+    FE -> Admin: Tampilkan pop-up konfirmasi finalisasi proses adopsi
+    deactivate FE
+
+    alt Admin konfirmasi "Continue"
+        Admin -> FE: Klik "Continue"
+        activate FE
+        FE -> BE: PUT /api/adoptions/{id}/finalize
+        activate BE
+        BE -> DB: Update status proses adopsi menjadi "Completed"
+        activate DB
+
+        alt Finalisasi berhasil
+            DB --> BE: OK (Status updated)
+            BE --> FE: 200 OK ("Adoption process finalized successfully")
+
+            ' === Perbedaan UI handling antara Flow A & B ===
+            alt Flow A: Update UI List
+                FE -> FE: Perbarui daftar proses adopsi di UI
+                activate FE #LightBlue
+                deactivate FE #LightBlue
+            else Flow B: Redirect
+                FE -> FE: Redirect ke daftar proses adopsi
+                activate FE #LightBlue
+                deactivate FE #LightBlue
+            end
+
+            FE -> Admin: Tampilkan toast "Adoption process finalized successfully"
+            deactivate FE
+
+            ' === Kirim notifikasi ke pihak terkait ===
+            BE -> NS: Kirim notifikasi ke calon pengadopsi dan penyedia hewan
+            deactivate BE
+            activate NS
+            NS -> FE_Adopter: "Congratulations! Your adoption has been completed"
+
+
+            activate FE_Adopter
+            FE_Adopter -> FE_Adopter: Tampilkan toast "Your adoption is now complete!"
+            activate FE_Adopter #LightBlue
+            deactivate FE_Adopter #LightBlue
+            deactivate FE_Adopter
+
+            NS -> FE_Provider: "An adoption process has been completed"
+            deactivate NS
+            activate FE_Provider
+            FE_Provider -> FE_Provider: Tampilkan toast "Adoption process completed successfully"
+            activate FE_Provider #LightBlue
+            deactivate FE_Provider #LightBlue
+            deactivate FE_Provider
+
+        else Gagal memperbarui status
+            DB --> BE: Error (Update failed)
+            deactivate DB
+            activate BE
+            BE --> FE: 500 Internal Server Error ("Failed to finalize adoption process")
+            deactivate BE
+            activate FE
+            FE -> Admin: Tampilkan toast "Failed to finalized adoption process. Please try again"
+            deactivate FE
+        end
+
+    else Admin membatalkan konfirmasi
+        Admin -> FE: Klik "Cancel"
+        activate FE
+        FE -> Admin: Tutup pop-up, proses adopsi tetap tersimpan
+        deactivate FE
+    end
+
+@enduml

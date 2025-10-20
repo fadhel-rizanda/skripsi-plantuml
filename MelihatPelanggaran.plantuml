@@ -1,0 +1,127 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor Admin
+participant "Next.js Reports Page" as FE
+participant "Laravel ReportController" as BE
+database "PostgreSQL (DB)" as DB
+
+' === Melihat Daftar Laporan ===
+Admin -> FE: Klik menu "Reports" pada navbar
+activate FE
+FE -> BE: GET /api/reports
+activate BE
+BE -> DB: Ambil daftar seluruh laporan beserta status
+activate DB
+DB --> BE: Return list of reports
+deactivate DB
+BE --> FE: 200 OK (Daftar laporan)
+deactivate BE
+FE -> Admin: Tampilkan tabel daftar laporan dengan status terkini
+deactivate FE
+
+' === Melihat Detail Laporan ===
+Admin -> FE: Klik laporan untuk melihat detail
+activate FE
+FE -> BE: GET /api/reports/{id}
+activate BE
+BE -> DB: Ambil detail laporan berdasarkan ID
+activate DB
+DB --> BE: Return report details
+deactivate DB
+BE --> FE: 200 OK (Detail laporan)
+deactivate BE
+FE -> Admin: Tampilkan halaman detail laporan
+deactivate FE
+
+' === Menindaklanjuti Laporan ===
+    Admin -> FE: Klik tombol action (Approve/Reject/Remove Content)
+    activate FE
+    FE -> Admin: Tampilkan pop-up konfirmasi tindakan
+    deactivate FE
+
+    alt Admin konfirmasi "Continue"
+        Admin -> FE: Klik "Continue"
+        activate FE
+        FE -> FE: Validasi model tindakan (cek input & status laporan)
+        FE -> BE: POST /api/reports/{id}/action (body: {action_type})
+        activate BE
+        BE -> DB: Perbarui status laporan sesuai model tindakan
+        activate DB
+
+        alt Pembaruan berhasil
+            DB --> BE: OK (Status updated)
+            BE --> FE: 200 OK (Tindakan berhasil)
+            deactivate BE
+            FE -> Admin: Tampilkan notifikasi sukses dan perbarui tampilan
+            deactivate FE
+
+        else Pembaruan gagal
+            DB --> BE: Error (Update failed)
+            deactivate DB
+            activate BE
+            BE --> FE: 500 Internal Server Error ("Failed to process report")
+            deactivate BE
+            activate FE
+            FE -> Admin: Tampilkan notifikasi gagal
+            deactivate FE
+        end
+
+    else Admin membatalkan konfirmasi
+        Admin -> FE: Klik "Cancel"
+        activate FE
+        FE -> Admin: Tutup pop-up, tidak ada perubahan pada laporan
+        deactivate FE
+
+'else Admin hanya melihat tanpa tindakan
+'    Admin -> FE: Tutup halaman atau kembali ke daftar
+'    activate FE
+'    FE -> Admin: Kembali ke daftar laporan
+'    deactivate FE
+end
+
+'note right of FE
+'    Detail laporan menampilkan:
+'    - Informasi pelapor
+'    - Konten yang dilaporkan (reportable_type)
+'    - Alasan dan deskripsi
+'    - Bukti/screenshot (jika ada)
+'    - Action buttons sesuai tipe konten
+'
+'    Setiap tindakan memiliki use case tersendiri:
+'
+'    **UC-31: Hapus Konten (Post)**
+'    - Admin hapus/restore post yang dilaporkan
+'    - Endpoint: DELETE /api/posts/{id}
+'
+'    **UC-32: Penonaktifan Pengguna (User)**
+'    - Admin ban/suspend user yang dilaporkan
+'    - Endpoint: POST /api/users/{id}/suspend
+'
+'    **UC-XX: Kelola Community Content**
+'    - Admin hapus/restore community
+'    - Endpoint: DELETE /api/communities/{id}
+'
+'    **UC-XX: Kelola Adoption Process**
+'    - Admin batalkan/review adoption
+'    - Endpoint: PATCH /api/adoptions/{id}
+'
+'    **UC-XX: Kelola Pet Content**
+'    - Admin hapus/restore pet listing
+'    - Endpoint: DELETE /api/pets/{id}
+'
+'    FE akan menembak ke endpoint yang sesuai
+'    berdasarkan reportable_type dari laporan.
+'end note
+
+@enduml

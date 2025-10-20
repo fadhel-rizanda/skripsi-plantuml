@@ -1,0 +1,108 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor "Calon Pengadopsi" as Adopter
+participant "Next.js Pet Detail Page" as FE
+participant "Laravel AdoptionController" as BE
+database "PostgreSQL (DB)" as DB
+
+title Mengadopsi Hewan (Overview)
+
+' === Flow 1: Memulai Proses Adopsi ===
+Adopter -> FE: Klik tombol "Adopt Me" pada detail hewan
+activate FE
+FE -> BE: POST /api/adoptions {pet_id, user_id}
+deactivate FE
+activate BE
+
+BE -> BE: Validasi user profile lengkap & pet tersedia
+activate BE #LightBlue
+deactivate BE #LightBlue
+
+alt Validasi berhasil (profile lengkap & pet tersedia)
+    BE -> DB: Buat adoption application (status: "Application Submitted")
+    activate DB
+
+    alt Application berhasil dibuat
+        DB --> BE: OK (Application created)
+        BE --> FE: 201 Created (Application detail)
+        deactivate BE
+        activate FE
+        FE -> Adopter: Redirect ke halaman "Application Progress"
+        deactivate FE
+
+    else Gagal membuat application (DB error)
+        DB --> BE: Error response
+        deactivate DB
+        activate BE
+        BE --> FE: 500 Internal Server Error ("Failed to create application")
+        activate FE
+        FE -> Adopter: Tampilkan pesan error "Failed to create adoption application"
+        deactivate FE
+    end
+
+else Profile tidak lengkap
+    BE --> FE: 400 Bad Request ("Profile must be completed")
+    activate FE
+    FE -> Adopter: Tampilkan pesan "Your profile must be completed before adoption"
+    deactivate FE
+
+else Hewan tidak tersedia
+    BE --> FE: 409 Conflict ("Pet not available")
+    deactivate BE
+    activate FE
+    FE -> Adopter: Tampilkan pesan "This pet is no longer available for adoption"
+    deactivate FE
+end
+
+
+' === Flow 2: Melihat Progress Adopsi ===
+'Adopter -> FE: Buka halaman "My Applications"
+'activate FE
+'FE -> BE: GET /api/adoptions/user/{user_id}
+'deactivate FE
+'activate BE
+'BE -> DB: Ambil semua adoption applications milik user
+'activate DB
+'DB --> BE: Return list of applications / null
+'deactivate DB
+'BE --> FE: 200 OK (List of applications dengan status)
+'deactivate BE
+'activate FE
+'FE -> Adopter: Tampilkan daftar aplikasi adopsi dengan tahapan masing-masing
+'deactivate FE
+'
+'note right of FE
+'    Setiap tahapan memiliki use case tersendiri:
+'
+'    **UC-01: Upload Requirements**
+'    - Adopter upload dokumen persyaratan
+'    - Status berubah ke "Application Submitted"
+'
+'    **UC-02: Provider Review Application**
+'    - Provider review & approve/reject
+'    - Status berubah ke "Application Reviewed"
+'
+'    **UC-03: Schedule Meet & Greet**
+'    - Provider tentukan jadwal pertemuan
+'    - Status berubah ke "Meet & Greet Scheduled"
+'
+'    **UC-04: Complete Adoption**
+'    - Adopter upload bukti hand over
+'    - Status berubah ke "Completed"
+'
+'    Setiap use case akan memiliki
+'    sequence diagram detail tersendiri
+'end note
+
+@enduml

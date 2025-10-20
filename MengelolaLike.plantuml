@@ -1,0 +1,97 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor User as Pengguna
+participant "Next.js Post Detail Page" as FE
+participant "Laravel LikeController" as BE
+database "PostgreSQL (DB)" as DB
+
+
+' === Flow 1: Membuka Halaman Detail Post ===
+Pengguna -> FE: Buka halaman detail postingan
+activate FE
+FE -> BE: GET /api/posts/{post_id}/likes/status
+deactivate FE
+activate BE
+BE -> DB: Ambil status Like dan jumlah total Like untuk post_id
+activate DB
+DB --> BE: Return like status & like count / null
+deactivate DB
+
+alt Data like berhasil dimuat
+    BE --> FE: 200 OK (like status & like count)
+    activate FE
+    FE -> Pengguna: Tampilkan ikon Like dan jumlah Like
+    deactivate FE
+else Gagal memuat data like
+    BE --> FE: 500 Internal Server Error ("Failed to load like data")
+    deactivate BE
+    activate FE
+    FE -> Pengguna: Tampilkan pesan error "Failed to load like data"
+    deactivate FE
+end
+
+
+' === Flow 2: Mengklik Ikon Like ===
+Pengguna -> FE: Klik ikon "Like"
+activate FE
+FE -> BE: POST /api/posts/{post_id}/like
+deactivate FE
+activate BE
+BE -> DB: Cek apakah pengguna sudah memberi Like
+activate DB
+DB --> BE: Return like status (liked/not liked)
+deactivate DB
+
+alt Pengguna belum memberi Like
+    BE -> DB: Simpan data Like untuk post_id dan user_id
+    activate DB
+    DB --> BE: OK (Like added)
+    deactivate DB
+    BE --> FE: 200 OK ("Liked", new like count)
+    activate FE
+    FE -> Pengguna: Perbarui ikon (aktif) dan tambah 1 pada jumlah Like
+    deactivate FE
+
+else Pengguna sudah memberi Like
+    BE -> DB: Hapus data Like untuk post_id dan user_id
+    activate DB
+    DB --> BE: OK (Like removed)
+    deactivate DB
+    BE --> FE: 200 OK ("Unliked", new like count)
+    deactivate BE
+    activate FE
+    FE -> Pengguna: Perbarui ikon (non-aktif) dan kurangi 1 pada jumlah Like
+    deactivate FE
+end
+
+
+' === Alternate Flow: Gagal Memperbarui Status Like ===
+alt Gagal memperbarui status Like
+    Pengguna -> FE: Klik ikon "Like"
+    activate FE
+    FE -> BE: POST /api/posts/{post_id}/like
+    deactivate FE
+    activate BE
+    BE -> DB: Cek atau update status Like
+    activate DB
+    DB --> BE: Error response
+    deactivate DB
+    BE --> FE: 500 Internal Server Error ("Failed to update like")
+    deactivate BE
+    activate FE
+    FE -> Pengguna: Tampilkan pesan error "Failed to update like. Please try again."
+    deactivate FE
+end
+
+@enduml

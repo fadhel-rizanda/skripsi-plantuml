@@ -24,7 +24,7 @@ activate FE
 FE -> BE: GET /api/notifications
 deactivate FE
 activate BE
-BE -> DB: Ambil daftar notifikasi berdasarkan user_id (ORDER BY created_at DESC LIMIT 20)
+BE -> DB: Ambil daftar notifikasi berdasarkan user_id
 activate DB
 DB --> BE: Return list of notifications / null
 deactivate DB
@@ -46,10 +46,10 @@ end
 ' === Subflow S-1: Membuka Notifikasi ===
 User -> FE: Klik salah satu notifikasi dari daftar
 activate FE
-FE -> BE: PATCH /api/notifications/{notification_id}/read
+FE -> BE: PUT /api/notifications/{notification_id}/read
 deactivate FE
 activate BE
-BE -> DB: Update notifications SET status = 'read' WHERE id = {notification_id}
+BE -> DB: Update notifikasi dengan is_read = true
 activate DB
 alt Berhasil update
     DB --> BE: OK (updated)

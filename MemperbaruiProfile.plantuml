@@ -1,0 +1,90 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor User
+participant "Next.js Profile Page" as FE
+participant "Laravel ProfileController" as BE
+database "PostgreSQL (DB)" as DB
+
+
+' === Flow 1: Membuka Halaman Profile ===
+User -> FE: Buka halaman Detail Profile
+activate FE
+FE -> BE: GET /api/profile/{user_id}
+deactivate FE
+activate BE
+BE -> DB: Ambil data profil berdasarkan user_id
+activate DB
+DB --> BE: Return data profil / null
+deactivate DB
+
+alt Data profil ditemukan
+    BE --> FE: 200 OK (Profile data)
+    activate FE
+    FE -> User: Tampilkan data profil dan tombol "Edit" jika user_id cocok
+    deactivate FE
+else Profil tidak ditemukan
+    BE --> FE: 404 Not Found ("Profile not found")
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan error "Profile not found"
+    deactivate FE
+end
+
+
+' === Flow 2: Mengedit dan Menyimpan Profil ===
+User -> FE: Klik tombol "Edit"
+activate FE
+FE -> User: Form profil menjadi editable
+deactivate FE
+
+User -> FE: Ubah data dan klik "Save & Continue"
+activate FE
+FE -> BE: PUT /api/profile/{user_id} {data profil baru}
+deactivate FE
+activate BE
+
+' === Validasi Data ===
+BE -> BE: Validasi input (nama, alamat, preferensi, dll.)
+activate BE #LightBlue
+deactivate BE #LightBlue
+
+alt Validasi berhasil
+    BE -> DB: Update data profil user
+    activate DB
+
+    alt Update berhasil
+        DB --> BE: OK (Profile updated)
+        BE --> FE: 200 OK ("Profile updated successfully")
+        activate FE
+        FE -> User: Tampilkan pesan sukses dan profil terbaru
+        deactivate FE
+
+    else Gagal memperbarui profil (DB error)
+        DB --> BE: Error response
+        deactivate DB
+        BE --> FE: 500 Internal Server Error ("Failed to update profile")
+        activate FE
+        FE -> User: Tampilkan pesan error "Failed to update profile. Please try again."
+        deactivate FE
+    end
+
+else Validasi gagal
+    BE --> FE: 400 Bad Request ("Validation error")
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan error sesuai field yang bermasalah
+    deactivate FE
+end
+
+@enduml
