@@ -64,7 +64,7 @@ end
 '== Mengunggah Bukti Hand Over ==
 User -> FE: Tekan tombol "Upload Proof" dan pilih file bukti
 activate FE
-FE -> BE: GET /api/adoptions/{id}/handover-upload-url
+FE -> BE: GET /api/file-upload/presigned-url?requirementId={id}
 deactivate FE
 activate BE
 
