@@ -11,12 +11,12 @@ skinparam sequence {
 hide footbox
 
 ' === Participants ===
-actor User as Pengguna
+actor "User (Calon Pengadopsi / Penyedia Hewan)" as Pengguna
 participant "Next.js Chat Page" as FE
 participant "Laravel ChatController" as BE
 participant "Laravel Reverb" as Reverb
 database "PostgreSQL (DB)" as DB
-participant "Next.js Chat (Penerima)" as FE_Receiver
+participant "Next.js (Penyedia Hewan / Calon Pengadopsi)" as FE_Receiver
 
 ' === Flow: Membuka Chat Room ===
 Pengguna -> FE: Klik "Chat Provider" / "Chat Adopter"

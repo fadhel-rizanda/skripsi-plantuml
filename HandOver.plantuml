@@ -1,0 +1,157 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor "User (Calon Pengadopsi / Penyedia Hewan)" as User
+participant "Next.js FE (Handover Day Page)" as FE
+participant "HandoverController" as BE
+participant "Cloud Storage (S3)" as Storage
+database "Database" as DB
+actor "Admin" as Admin
+
+'== Membuka Halaman Handover Day ==
+User -> FE: Buka tab "Handover Day"
+activate FE
+FE -> BE: GET /api/adoptions/{id}/handover-status
+activate BE
+BE -> DB: Ambil data handover
+activate DB
+DB --> BE: Data handover terkini
+deactivate DB
+BE --> FE: 200 OK (Data handover)
+deactivate BE
+FE -> User: Tampilkan form jadwal dan upload bukti
+deactivate FE
+
+'== Menentukan Jadwal dan Lokasi ==
+User -> FE: Isi form jadwal & lokasi, tekan "Set Handover Schedule"
+activate FE
+FE -> BE: POST /api/adoptions/{id}/handover-proposal {date, time, location}
+deactivate FE
+activate BE
+BE -> DB: Simpan jadwal dan lokasi handover
+deactivate BE
+activate DB
+
+alt Gagal menyimpan jadwal
+    DB --> BE: Error response (e.g., constraint violation / connection failure)
+    activate BE
+    BE --> FE: 500 Internal Server Error ("Failed to save schedule")
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan "Failed to set handover schedule. Please try again."
+    deactivate FE
+else Jadwal berhasil disimpan
+    DB --> BE: Success (Schedule saved)
+    deactivate DB
+    activate BE
+    BE --> FE: 201 Created (Schedule saved)
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan "Handover schedule saved successfully"
+    deactivate FE
+end
+
+'== Mengunggah Bukti Hand Over ==
+User -> FE: Tekan tombol "Upload Proof" dan pilih file bukti
+activate FE
+FE -> BE: GET /api/adoptions/{id}/handover-upload-url
+deactivate FE
+activate BE
+
+alt Gagal generate pre-signed URL
+    BE --> FE: 500 Internal Server Error ("Failed to generate upload URL")
+    activate FE
+    FE -> User: Tampilkan pesan "Failed to prepare upload. Try again."
+    deactivate FE
+
+else URL berhasil digenerate
+    BE --> FE: 200 OK (pre-signed URL)
+    deactivate BE
+    activate FE
+end
+
+FE -> Storage: POST file ke pre-signed URL
+deactivate FE
+activate Storage
+
+alt Gagal upload file
+    Storage --> FE: 500 Internal Server Error ("Upload failed")
+    activate FE
+    FE -> User: Tampilkan pesan "Upload failed. Please try again."
+    deactivate FE
+else Upload berhasil
+    Storage --> FE: 201 Created (File uploaded)
+    deactivate Storage
+    activate FE
+end
+
+FE -> BE: POST /api/adoptions/{id}/handover-proof {file-metadata}
+deactivate FE
+activate BE
+BE -> DB: Simpan metadata file dan update status "Proof Uploaded"
+activate DB
+
+alt Gagal simpan metadata
+    DB --> BE: Error response (e.g., constraint violation / connection failure)
+    BE --> FE: 500 Internal Server Error ("Failed to save record")
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan "Upload completed but failed to save record. Contact support."
+    deactivate FE
+else Metadata berhasil disimpan
+    DB --> BE: Success (Metadata saved))
+    deactivate DB
+    activate BE
+    BE --> FE: 201 Created (Metadata saved)
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan "Proof uploaded successfully"
+    deactivate FE
+end
+
+'== Menyelesaikan Proses Handover ==
+User -> FE: Centang konfirmasi dan klik "Complete Handover"
+activate FE
+FE -> BE: PUT /api/adoptions/{id}/complete-handover
+deactivate FE
+activate BE
+BE -> DB: Update status handover
+deactivate BE
+activate DB
+
+alt Gagal update status
+    DB --> BE: Error response (e.g., constraint violation / connection failure)
+    activate BE
+    BE --> FE: 500 Internal Server Error ("Failed to update status")
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan "Failed to update status. Please try again."
+    deactivate FE
+else Status berhasil diperbarui
+    DB --> BE: Success (Status updated)
+    deactivate DB
+    activate BE
+    BE -> Admin: Kirim notifikasi "Adoption handover pending Finalization"
+
+    BE --> FE: 200 OK (Status updated)
+    deactivate BE
+    activate FE
+    FE -> User: Tampilkan pesan "Handover completed, pending verification"
+    deactivate FE
+'    note right of Admin
+'        Admin akan melakukan proses
+'        finalisasi dan verifikasi handover
+'    end note
+end
+
+@enduml

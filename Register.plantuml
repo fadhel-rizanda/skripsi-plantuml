@@ -80,7 +80,7 @@ else Valid input
         Mailer --> BE: Error
         deactivate Mailer
         activate BE
-        BE --> FE: 500 Internal Server Error ("Failed to send verification email")
+        BE --> FE: "Failed to send verification email")
         deactivate BE
         activate FE
         FE -> User: Show error message ("Failed to send email")

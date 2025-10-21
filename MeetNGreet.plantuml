@@ -1,0 +1,176 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor "User (Calon Pengadopsi / Penyedia Hewan)" as Pengguna
+participant "Next.js Adoption Detail Page" as FE
+participant "Laravel AdoptionController" as BE
+database "PostgreSQL (DB)" as DB
+participant "Notification Service" as NS
+participant "Next.js (Penyedia Hewan / Calon Pengadopsi)" as FE_Other
+
+' === Flow: Membuka Halaman Meet & Greet ===
+Pengguna -> FE: Buka halaman detail proses adopsi
+activate FE
+FE -> BE: GET /api/adoptions/{id}
+deactivate FE
+activate BE
+BE -> DB: Ambil detail proses adopsi
+activate DB
+DB --> BE: Return adoption details
+deactivate DB
+BE --> FE: 200 OK (Detail proses adopsi)
+deactivate BE
+
+activate FE
+FE -> BE: GET /api/adoptions/{id}/meet-proposals
+deactivate FE
+activate BE
+BE -> DB: Ambil daftar proposal jadwal
+activate DB
+DB --> BE: Return list of proposals
+deactivate DB
+BE --> FE: 200 OK (List proposals)
+deactivate BE
+
+activate FE
+FE -> Pengguna: Tampilkan tab "Meet & Greet" dengan daftar proposal
+deactivate FE
+
+' === Flow: Mengajukan Proposal Jadwal Baru ===
+Pengguna -> FE: Isi form jadwal & lokasi, tekan "Set Handover Schedule"
+activate FE
+FE -> BE: POST /api/adoptions/{id}/meet-proposal {date, time, location}
+deactivate FE
+activate BE
+BE -> DB: Simpan proposal jadwal baru
+activate DB
+
+alt Proposal berhasil disimpan
+        DB --> BE: OK (Proposal saved)
+
+        BE -> NS: Kirim notifikasi ke Pihak Lain
+        activate NS
+        NS -> FE_Other: Push notification "You have received a new Meet & Greet proposal"
+        activate FE_Other
+        FE_Other -> FE_Other: Update notification badge
+        activate FE_Other #LightBlue
+        deactivate FE_Other #LightBlue
+        deactivate FE_Other
+        NS --> BE: Notification sent
+        deactivate NS
+
+        BE --> FE: 200 OK ("Proposal submitted successfully")
+        deactivate BE
+        activate FE
+        FE -> Pengguna: Tampilkan status "Need an action" dan notifikasi sukses
+        deactivate FE
+
+    else Gagal menyimpan proposal (DB error)
+        DB --> BE: Error response
+        deactivate DB
+        activate BE
+        BE --> FE: 500 Internal Server Error ("Failed to set proposal")
+        deactivate BE
+        activate FE
+        FE -> Pengguna: Tampilkan pesan error "Failed to set proposal. Please try again"
+        deactivate FE
+    end
+
+' === Flow: Menanggapi Proposal yang Ada ===
+Pengguna -> FE: Lihat proposal dari pihak lain
+activate FE
+FE -> Pengguna: Tampilkan detail proposal (dengan opsi Accept/Propose New)
+deactivate FE
+
+alt Pengguna memilih "Accept Proposal"
+    Pengguna -> FE: Klik tombol "Accept Proposal"
+    activate FE
+    FE -> BE: PUT /api/adoptions/{id}/meet-proposal/{pid}/accept
+    deactivate FE
+    activate BE
+    BE -> DB: Perbarui status proposal menjadi "accepted"
+    activate DB
+
+    alt Pembaruan berhasil
+        DB --> BE: OK (Status updated)
+
+        BE -> NS: Kirim notifikasi ke Pihak Lain
+        activate NS
+        NS -> FE_Other: Push notification "Your Meet & Greet proposal has been accepted"
+        activate FE_Other
+        FE_Other -> FE_Other: Update notification badge dan UI
+        activate FE_Other #LightBlue
+        deactivate FE_Other #LightBlue
+        deactivate FE_Other
+        NS --> BE: Notification sent
+        deactivate NS
+
+        BE --> FE: 200 OK ("Proposal accepted")
+        deactivate BE
+        activate FE
+        FE -> Pengguna: Tampilkan notifikasi sukses dan perbarui tampilan
+        deactivate FE
+
+    else Pembaruan gagal (DB error)
+        DB --> BE: Error response
+        deactivate DB
+        activate BE
+        BE --> FE: 500 Internal Server Error ("Failed to update status")
+        deactivate BE
+        activate FE
+        FE -> Pengguna: Tampilkan pesan error "Failed to update status. Please try again"
+        deactivate FE
+    end
+
+else Pengguna memilih "Propose New Time/Location"
+    Pengguna -> FE: Isi formulir proposal baru
+    activate FE
+    FE -> BE: POST /api/adoptions/{id}/meet-proposal {date, time, location}
+    deactivate FE
+    activate BE
+    BE -> DB: Simpan proposal baru
+    activate DB
+
+    alt Proposal tersimpan
+            DB --> BE: OK (Proposal saved)
+
+            BE -> NS: Kirim notifikasi ke Pihak Lain
+            activate NS
+            NS -> FE_Other: Push notification "A new Meet & Greet proposal has been submitted"
+            activate FE_Other
+            FE_Other -> FE_Other: Update notification badge
+            activate FE_Other #LightBlue
+            deactivate FE_Other #LightBlue
+            deactivate FE_Other
+            NS --> BE: Notification sent
+            deactivate NS
+
+            BE --> FE: 200 OK ("New proposal submitted")
+            deactivate BE
+            activate FE
+            FE -> Pengguna: Tampilkan notifikasi sukses
+            deactivate FE
+
+        else Gagal menyimpan proposal (DB error)
+            DB --> BE: Error response
+            deactivate DB
+            activate BE
+            BE --> FE: 500 Internal Server Error ("Failed to set proposal")
+            deactivate BE
+            activate FE
+            FE -> Pengguna: Tampilkan pesan error "Failed to set proposal. Please try again"
+            deactivate FE
+        end
+end
+
+@enduml
