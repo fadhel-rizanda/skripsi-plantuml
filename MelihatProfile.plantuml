@@ -11,13 +11,13 @@ skinparam sequence {
 hide footbox
 
 ' === Participants ===
-actor User
-participant "Next.js Profile Page" as FE
-participant "Laravel ProfileController" as BE
-database "PostgreSQL (DB)" as DB
+actor Pengguna
+participant "Profile Page (Next.js FE)" as FE
+participant "ProfileController (Laravel BE)" as BE
+database "Database (PostgreSQL)" as DB
 
 ' === Normal Flow: Melihat Profil ===
-User -> FE: Klik foto profil (navbar / profil pengguna lain)
+Pengguna -> FE: Klik foto profil (navbar / profil pengguna lain)
 activate FE
 FE -> BE: GET /api/profile/{user_id}
 deactivate FE
@@ -31,14 +31,14 @@ deactivate DB
 alt Profil ditemukan
     BE --> FE: 200 OK (Profile data)
     activate FE
-    FE -> User: Tampilkan halaman profil dengan informasi lengkap
+    FE -> Pengguna: Tampilkan halaman profil dengan informasi lengkap
     deactivate FE
 
 else Profil tidak ditemukan / user dihapus
     BE --> FE: 404 Not Found ("Profile not found")
     deactivate BE
     activate FE
-    FE -> User: Tampilkan pesan error "Profile not found"
+    FE -> Pengguna: Tampilkan pesan error "Profile not found"
     deactivate FE
 end
 @enduml

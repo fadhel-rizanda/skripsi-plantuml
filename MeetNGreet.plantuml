@@ -11,12 +11,12 @@ skinparam sequence {
 hide footbox
 
 ' === Participants ===
-actor "User (Calon Pengadopsi / Penyedia Hewan)" as Pengguna
-participant "Next.js Adoption Detail Page" as FE
-participant "Laravel AdoptionController" as BE
-database "PostgreSQL (DB)" as DB
-participant "Notification Service" as NS
-participant "Next.js (Penyedia Hewan / Calon Pengadopsi)" as FE_Other
+actor "Pengguna (Calon Pengadopsi / Penyedia Hewan)" as Pengguna
+participant "Adoption Detail Page (Next.js FE)" as FE
+participant "AdoptionController (Laravel BE)" as BE
+database "Database (PostgreSQL)" as DB
+participant "NotificationService (Laravel BE)" as NS
+actor "Pengguna (Penyedia Hewan / Calon Pengadopsi)" as FE_Other
 
 ' === Flow: Membuka Halaman Meet & Greet ===
 Pengguna -> FE: Buka halaman detail proses adopsi
@@ -58,15 +58,10 @@ activate DB
 alt Proposal berhasil disimpan
         DB --> BE: OK (Proposal saved)
 
-        BE -> NS: Kirim notifikasi ke Pihak Lain
+        BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}"
         activate NS
         NS -> FE_Other: Push notification "You have received a new Meet & Greet proposal"
-        activate FE_Other
-        FE_Other -> FE_Other: Update notification badge
-        activate FE_Other #LightBlue
-        deactivate FE_Other #LightBlue
-        deactivate FE_Other
-        NS --> BE: Notification sent
+        NS --> BE: Event broadcasted
         deactivate NS
 
         BE --> FE: 200 OK ("Proposal submitted successfully")
@@ -76,7 +71,7 @@ alt Proposal berhasil disimpan
         deactivate FE
 
     else Gagal menyimpan proposal (DB error)
-        DB --> BE: Error response
+        DB --> BE: Error (e.g., constraint violation / connection failure)
         deactivate DB
         activate BE
         BE --> FE: 500 Internal Server Error ("Failed to set proposal")
@@ -104,15 +99,10 @@ alt Pengguna memilih "Accept Proposal"
     alt Pembaruan berhasil
         DB --> BE: OK (Status updated)
 
-        BE -> NS: Kirim notifikasi ke Pihak Lain
+        BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}"
         activate NS
         NS -> FE_Other: Push notification "Your Meet & Greet proposal has been accepted"
-        activate FE_Other
-        FE_Other -> FE_Other: Update notification badge dan UI
-        activate FE_Other #LightBlue
-        deactivate FE_Other #LightBlue
-        deactivate FE_Other
-        NS --> BE: Notification sent
+        NS --> BE: Event broadcasted
         deactivate NS
 
         BE --> FE: 200 OK ("Proposal accepted")
@@ -122,7 +112,7 @@ alt Pengguna memilih "Accept Proposal"
         deactivate FE
 
     else Pembaruan gagal (DB error)
-        DB --> BE: Error response
+        DB --> BE: Error (e.g., constraint violation / data not found / connection failure)
         deactivate DB
         activate BE
         BE --> FE: 500 Internal Server Error ("Failed to update status")
@@ -144,15 +134,10 @@ else Pengguna memilih "Propose New Time/Location"
     alt Proposal tersimpan
             DB --> BE: OK (Proposal saved)
 
-            BE -> NS: Kirim notifikasi ke Pihak Lain
+            BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}"
             activate NS
             NS -> FE_Other: Push notification "A new Meet & Greet proposal has been submitted"
-            activate FE_Other
-            FE_Other -> FE_Other: Update notification badge
-            activate FE_Other #LightBlue
-            deactivate FE_Other #LightBlue
-            deactivate FE_Other
-            NS --> BE: Notification sent
+            NS --> BE: Event broadcasted
             deactivate NS
 
             BE --> FE: 200 OK ("New proposal submitted")
@@ -162,7 +147,7 @@ else Pengguna memilih "Propose New Time/Location"
             deactivate FE
 
         else Gagal menyimpan proposal (DB error)
-            DB --> BE: Error response
+            DB --> BE: Error (e.g., constraint violation / connection failure)
             deactivate DB
             activate BE
             BE --> FE: 500 Internal Server Error ("Failed to set proposal")

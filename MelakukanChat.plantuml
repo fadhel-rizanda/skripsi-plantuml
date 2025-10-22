@@ -11,12 +11,12 @@ skinparam sequence {
 hide footbox
 
 ' === Participants ===
-actor "User (Calon Pengadopsi / Penyedia Hewan)" as Pengguna
-participant "Next.js Chat Page" as FE
-participant "Laravel ChatController" as BE
-participant "Laravel Reverb" as Reverb
-database "PostgreSQL (DB)" as DB
-participant "Next.js (Penyedia Hewan / Calon Pengadopsi)" as FE_Receiver
+actor "Pengguna (Calon Pengadopsi / Penyedia Hewan)" as Pengguna
+participant "Chat Page (Next.js FE)" as FE
+participant "ChatController (Laravel BE)" as BE
+participant "NotificationService (Laravel BE)" as Reverb
+database "Database (PostgreSQL)" as DB
+actor "Pengguna (Penyedia Hewan / Calon Pengadopsi)" as FE_Receiver
 
 ' === Flow: Membuka Chat Room ===
 Pengguna -> FE: Klik "Chat Provider" / "Chat Adopter"
@@ -98,11 +98,6 @@ else Validasi berhasil
         BE -> Reverb: Broadcast event "MessageSent" ke channel "chat.{room_id}"
         activate Reverb
         Reverb -> FE_Receiver: Push message event ke penerima
-        activate FE_Receiver
-        FE_Receiver -> FE_Receiver: Update chat UI dengan pesan baru
-        activate FE_Receiver #LightBlue
-        deactivate FE_Receiver #LightBlue
-        deactivate FE_Receiver
         Reverb --> BE: Event broadcasted
         deactivate Reverb
 
@@ -117,6 +112,7 @@ else Validasi berhasil
         deactivate DB
         activate BE
         BE --> FE: 500 Internal Server Error ("Failed to send message")
+        deactivate BE
         activate FE
         FE -> Pengguna: Tampilkan pesan error "Failed to send message. Please try again."
         deactivate FE

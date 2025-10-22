@@ -1,0 +1,291 @@
+@startuml
+' === Styling ===
+skinparam sequence {
+    LifelineFooterStrategy none
+    MessageAlign center
+    ArrowThickness 1
+    ParticipantPadding 20
+    GroupBorderThickness 0.5
+    GroupBackgroundColor #F9F9F9
+}
+hide footbox
+
+' === Participants ===
+actor "Pengguna" as Provider
+participant "Community Page (Next.js FE)" as FE
+participant "CommunityController (Laravel BE)" as BE
+participant "FileUploadController (Laravel BE)" as FileBE
+participant "Cache (Redis)" as Redis
+participant "Cloud Storage (S3)" as Storage
+database "Database (PostgreSQL)" as DB
+
+
+'== A. Membuka Form Tambah Komunitas ==
+Provider -> FE: Klik "Create Community"
+activate FE
+FE -> BE: GET /api/tags
+activate BE
+BE -> Redis: GET cache:tags
+activate Redis
+
+alt Cache tersedia
+    Redis --> BE: Return cached tags
+else Cache kosong
+    Redis --> BE: Cache miss
+    deactivate Redis
+    BE -> DB: Ambil semua data tag
+    activate DB
+    DB --> BE: Return tags data
+    deactivate DB
+    BE -> Redis: SET cache:tags (expired 1 jam)
+    activate Redis
+    Redis --> BE: OK
+    deactivate Redis
+end
+BE --> FE: 200 OK (Tags data)
+deactivate BE
+FE -> FE: Simpan tags di FE state
+activate FE #LightBlue
+deactivate FE #LightBlue
+
+FE -> Provider: Tampilkan form input data + dropdown tag
+deactivate FE
+
+
+'== B. Penambahan Komunitas ==
+alt Ada gambar baru
+Provider -> FE: Isi form dan mengunggah gambar baru
+activate FE
+    FE -> FileBE: GET /api/file-upload/presigned-url
+    deactivate FE
+    activate FileBE
+
+    alt Gagal generate URL
+        FileBE --> FE: 500 Internal Server Error ("Failed to generate URL")
+        activate FE
+        FE -> Provider: Tampilkan pesan gagal upload
+        deactivate FE
+    else URL berhasil digenerate
+        FileBE --> FE: 200 OK (Pre-signed URL)
+        deactivate FileBE
+        activate FE
+
+        FE -> Storage: POST gambar ke pre-signed URL
+        deactivate FE
+        activate Storage
+
+        alt Gagal upload
+            Storage --> FE: Error ("Upload failed")
+            activate FE
+            FE -> Provider: Tampilkan pesan gagal upload
+            deactivate FE
+        else Upload berhasil
+            Storage --> FE: 201 Created (File uploaded)
+            deactivate Storage
+            activate FE
+            FE -> BE: POST /api/communities (Community data)
+            deactivate FE
+            activate BE
+            BE -> DB: Simpan data komunitas dan URL
+            deactivate BE
+            activate DB
+
+            alt Gagal simpan
+                DB --> BE: Error (e.g., constraint violation / connection failure)
+                activate BE
+                BE --> FE: 500 Error ("Failed to save community")
+                deactivate BE
+                activate FE
+                FE -> Provider: Tampilkan pesan gagal simpan
+                deactivate FE
+            else Berhasil
+                DB --> BE: Success (Community saved)
+                deactivate DB
+                activate BE
+
+                BE --> FE: 201 Created ("Community saved")
+                deactivate BE
+                activate FE
+                FE -> Provider: Notifikasi "Community added successfully"
+                deactivate FE
+            end
+        end
+    end
+else Tidak ada gambar baru
+    Provider -> FE: Isi form tanpa gambar baru
+    activate FE
+    FE -> BE: POST /api/communities (Community data)
+    deactivate FE
+    activate BE
+    BE -> DB: Simpan data komunitas tanpa URL
+    deactivate BE
+    activate DB
+
+    alt Gagal simpan
+        DB --> BE: Error (e.g., constraint violation / connection failure)
+        activate BE
+        BE --> FE: 500 Error ("Failed to save community")
+        deactivate BE
+        activate FE
+        FE -> Provider: Pesan gagal simpan
+        deactivate FE
+    else Berhasil
+        DB --> BE: Success (Community saved)
+        deactivate DB
+        activate BE
+        BE --> FE: 201 Created ("Community saved")
+        deactivate BE
+        activate FE
+        FE -> Provider: Notifikasi "Community added successfully"
+        deactivate FE
+    end
+end
+deactivate FE
+
+
+'== C. Pengeditan Komunitas ==
+Provider -> FE: Buka halaman detail komunitas
+activate FE
+FE -> BE: GET /api/communities/{id}
+activate BE
+BE -> DB: Ambil data komunitas
+activate DB
+DB --> BE: Return data
+deactivate DB
+BE --> FE: 200 OK (Community data)
+deactivate BE
+FE -> Provider: Tampilkan halaman detail komunitas
+deactivate FE
+
+
+'== D. Edit dan Simpan Perubahan ==
+Provider -> FE: Klik "Edit Information"
+activate FE
+'Provider -> FE: Klik "Edit Information"
+'activate FE
+'FE -> BE: GET /api/tags
+'activate BE
+'BE -> Redis: GET cache:tags
+'activate Redis
+'
+'alt Cache tersedia
+'    Redis --> BE: Return cached tags
+'else Cache kosong
+'    Redis --> BE: Cache miss
+'    deactivate Redis
+'    BE -> DB: Ambil semua data tag
+'    activate DB
+'    DB --> BE: Return tags data
+'    deactivate DB
+'    BE -> Redis: SET cache:tags (expired 1 jam)
+'    activate Redis
+'    Redis --> BE: OK
+'    deactivate Redis
+'end
+'BE --> FE: 200 OK (Tags data)
+'
+'deactivate BE
+'FE -> FE: Simpan tags di FE state
+'activate FE #LightBlue
+'deactivate FE #LightBlue
+FE -> FE: Memasukkan data komunitas kedalam form edit
+activate FE #LightBlue
+deactivate FE #LightBlue
+FE -> FE: Ambil tags di FE state
+activate FE #LightBlue
+deactivate FE #LightBlue
+FE -> Provider: Tampilkan form edit + data lama
+deactivate FE
+
+
+'== E. Menyimpan Perubahan ==
+
+
+alt Ada gambar baru
+    Provider -> FE: Submit form edit dan gambar baru
+    activate FE
+    FE -> FileBE: GET /api/file-upload/presigned-url
+    deactivate FE
+    activate FileBE
+
+    alt Gagal generate URL
+        FileBE --> FE: 500 Internal Server Error ("Failed to generate URL")
+        activate FE
+        FE -> Provider: Tampilkan pesan gagal upload
+        deactivate FE
+    else URL berhasil
+        FileBE --> FE: 200 OK (Pre-signed URL)
+        deactivate FileBE
+        activate FE
+        FE -> Storage: POST gambar ke pre-signed URL
+        deactivate FE
+        activate Storage
+
+        alt Upload gagal
+            Storage --> FE: Error ("Upload failed")
+            activate FE
+            FE -> Provider: Pesan gagal upload
+            deactivate FE
+        else Upload berhasil
+            Storage --> FE: Success
+            deactivate Storage
+            activate FE
+            FE -> BE: PUT /api/communities/{id} (Community data)
+            deactivate FE
+            activate BE
+            BE -> DB: Update data komunitas
+            deactivate BE
+            activate DB
+
+            alt Gagal update
+                DB --> BE: Error (e.g., constraint violation / data not found / connection failure)
+                activate BE
+                BE --> FE: 500 Internal Server Error ("Failed to update community")
+                deactivate BE
+                activate FE
+                FE -> Provider: Pesan gagal update
+                deactivate FE
+            else Berhasil update
+                DB --> BE: Success (Community updated)
+                deactivate DB
+                activate BE
+                BE --> FE: 200 OK (Community updated)
+                deactivate BE
+                activate FE
+                FE -> Provider: Notifikasi "Community updated successfully"
+                deactivate FE
+            end
+        end
+    end
+else Tidak ada gambar baru
+    Provider -> FE: Submit form edit tanpa gambar baru
+    activate FE
+    FE -> BE: PUT /api/communities/{id} (Community data)
+    deactivate FE
+    activate BE
+    BE -> DB: Update data komunitas
+    deactivate BE
+    activate DB
+
+    alt Gagal update
+        DB --> BE: Error (e.g., constraint violation / data not found / connection failure)
+        activate BE
+        BE --> FE: 500 Internal Server Error ("Failed to update community")
+        deactivate BE
+        activate FE
+        FE -> Provider: Pesan gagal update
+        deactivate FE
+    else Berhasil update
+        DB --> BE: Success (Community updated)
+        deactivate DB
+        activate BE
+        BE --> FE: 200 OK (Community updated)
+        deactivate BE
+        activate FE
+        FE -> Provider: Notifikasi "Community updated successfully"
+        deactivate FE
+    end
+end
+deactivate FE
+
+@enduml

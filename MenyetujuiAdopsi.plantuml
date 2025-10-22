@@ -12,9 +12,9 @@ hide footbox
 
 ' === Participants ===
 actor "Penyedia Hewan" as Provider
-participant "Adoption Page (FE)" as FE
-participant "AdoptionController (BE)" as BE
-database "PostgreSQL (DB)" as DB
+participant "Adoption Page (Next.js FE)" as FE
+participant "AdoptionController (Laravel BE)" as BE
+database "Database (PostgreSQL)" as DB
 
 ' === Flow: Menyetujui Proses Adopsi ===
 Provider -> FE: Buka halaman "Adoption Process"

@@ -12,14 +12,14 @@ hide footbox
 
 
 ' === Participants ===
-actor User
-participant "Next.js Navbar (Notification Icon)" as FE
-participant "Laravel NotificationController" as BE
-database "PostgreSQL (DB)" as DB
+actor Pengguna
+participant "Notification Page (Next.js FE)" as FE
+participant "NotificationController (Larvel BE)" as BE
+database "Database (PostgreSQL)" as DB
 
 
 ' === Normal Flow: Melihat Daftar Notifikasi ===
-User -> FE: Klik ikon lonceng pada navbar
+Pengguna -> FE: Klik ikon lonceng pada navbar
 activate FE
 FE -> BE: GET /api/notifications
 deactivate FE
@@ -29,22 +29,19 @@ activate DB
 DB --> BE: Return list of notifications / null
 deactivate DB
 
-alt Notifikasi tersedia
-    BE --> FE: 200 OK (List of notifications)
-    activate FE
-    FE -> User: Tampilkan drawer berisi daftar notifikasi
-    deactivate FE
-else Tidak ada notifikasi baru
+alt Tidak ada notifikasi baru
     BE --> FE: 200 OK (Empty list)
     deactivate BE
     activate FE
-    FE -> User: Tampilkan pesan "No new notifications"
+    FE -> Pengguna: Tampilkan pesan "No new notifications"
     deactivate FE
-
-end
-
+else Notifikasi tersedia
+    BE --> FE: 200 OK (List of notifications)
+    activate FE
+    FE -> Pengguna: Tampilkan drawer berisi daftar notifikasi
+    deactivate FE
 ' === Subflow S-1: Membuka Notifikasi ===
-User -> FE: Klik salah satu notifikasi dari daftar
+Pengguna -> FE: Klik salah satu notifikasi dari daftar
 activate FE
 FE -> BE: PUT /api/notifications/{notification_id}/read
 deactivate FE
@@ -56,7 +53,7 @@ alt Berhasil update
     BE --> FE: 200 OK ("Notification marked as read")
     deactivate BE
     activate FE
-    FE -> User: Tandai notifikasi sebagai terbaca dan arahkan ke halaman terkait
+    FE -> Pengguna: Tandai notifikasi sebagai terbaca dan arahkan ke halaman terkait
     deactivate FE
 else Gagal update notifikasi
     DB --> BE: Error (Update failed / DB unreachable)
@@ -65,8 +62,9 @@ else Gagal update notifikasi
     BE --> FE: 500 Internal Server Error ("Failed to update notification status")
     deactivate BE
     activate FE
-    FE -> User: Tampilkan pesan error "Gagal menandai notifikasi sebagai terbaca"
+    FE -> Pengguna: Tampilkan pesan error "Gagal menandai notifikasi sebagai terbaca"
     deactivate FE
+end
 end
 
 

@@ -11,19 +11,18 @@ skinparam sequence {
 hide footbox
 
 ' === Participants ===
-actor User
-participant "Next.js Community Page" as FE
-participant "Laravel CommunityController" as BE_Community
-participant "Laravel FilterController" as BE_Filter
-participant "Redis (Cache)" as Redis
-database "PostgreSQL (DB)" as DB
+actor Pengguna
+participant "Community Page (Next.js FE)" as FE
+participant "CommunityController (Laravel BE)" as BE_Community
+participant "FilterController (Laravel BE)" as BE_Filter
+participant "Cache (Redis)" as Redis
+database "Database (PostgreSQL)" as DB
 
 ' === Normal Flow: Melihat Daftar Komunitas ===
-User -> FE: Klik menu "Community" pada navbar
+Pengguna -> FE: Klik menu "Community" pada navbar
 activate FE
 
 ' --- Paralel Request ---
-par Ambil daftar komunitas
     FE -> BE_Community: GET /api/communities
     deactivate FE
     activate BE_Community
@@ -32,19 +31,17 @@ par Ambil daftar komunitas
     DB --> BE_Community: Return list of communities / null
     deactivate DB
 
-    alt Data komunitas berhasil dimuat
-        BE_Community --> FE: 200 OK (List of communities)
-        activate FE
-        FE -> User: Tampilkan daftar komunitas di tab "All Communities"
-        deactivate FE
-    else Gagal memuat data komunitas
-        BE_Community --> FE: 500 Internal Server Error ("Failed to load communities")
+    alt Gagal memuat data komunitas
+        BE_Community --> FE: 200 OK (Empty list)
         deactivate BE_Community
         activate FE
-        FE -> User: Tampilkan pesan error "Failed to load communities"
-    end
+        FE -> Pengguna: Tampilkan pesan error "Failed to load communities"
+        deactivate FE
+    else Data komunitas berhasil dimuat
+        BE_Community --> FE: 200 OK (List of communities)
+        activate FE
+        FE -> Pengguna: Tampilkan daftar komunitas di tab "All Communities"
 
-else Ambil data filter (kategori, lokasi, tag)
     FE -> BE_Filter: GET /api/community-filters
     activate BE_Filter
     BE_Filter -> Redis: GET cache:community_filters
@@ -68,19 +65,18 @@ else Ambil data filter (kategori, lokasi, tag)
         deactivate Redis
         BE_Filter --> FE: 200 OK (Filters from DB)
         deactivate BE_Filter
-    end
     FE -> FE:Simpan filter di FE
     activate FE #LightBlue
     deactivate FE #LightBlue
 end
 
 activate FE
-FE -> User: Tampilkan daftar komunitas & opsi filter
+FE -> Pengguna: Tampilkan daftar komunitas & opsi filter
 deactivate FE
 
 
 ' === Flow: Menggunakan Pencarian / Filter ===
-User -> FE: Masukkan kata kunci atau filter (kategori, lokasi, tag)
+Pengguna -> FE: Masukkan kata kunci atau filter (kategori, lokasi, tag)
 activate FE
 FE -> BE_Community: GET /api/communities?filter=...
 deactivate FE
@@ -92,12 +88,12 @@ deactivate DB
 BE_Community --> FE: 200 OK (Filtered communities)
 deactivate BE_Community
 activate FE
-FE -> User: Tampilkan hasil pencarian / filter
+FE -> Pengguna: Tampilkan hasil pencarian / filter
 deactivate FE
 
 
 ' === Flow: Melihat Detail Komunitas ===
-User -> FE: Klik salah satu komunitas dari daftar
+Pengguna -> FE: Klik salah satu komunitas dari daftar
 activate FE
 FE -> BE_Community: GET /api/communities/{community_id}
 deactivate FE
@@ -111,7 +107,7 @@ alt Detail komunitas ditemukan
     BE_Community --> FE: 200 OK (Community detail)
     deactivate BE_Community
     activate FE
-    FE -> User: Tampilkan halaman detail komunitas
+    FE -> Pengguna: Tampilkan halaman detail komunitas
 
     ' === Subflow: Menampilkan Postingan dalam Komunitas ===
     FE -> BE_Community: GET /api/communities/{community_id}/posts
@@ -121,14 +117,16 @@ alt Detail komunitas ditemukan
     DB --> BE_Community: Return list of posts / null
     deactivate DB
     BE_Community --> FE: 200 OK (List of posts)
-    FE -> User: Tampilkan daftar postingan di halaman komunitas
+    FE -> Pengguna: Tampilkan daftar postingan di halaman komunitas
     deactivate FE
 
 else Komunitas tidak ditemukan / telah dihapus
     BE_Community --> FE: 404 Not Found ("Community not found")
     deactivate BE_Community
     activate FE
-    FE -> User: Tampilkan pesan error "Community not found"
+    FE -> Pengguna: Tampilkan pesan error "Community not found"
     deactivate FE
 end
+    end
+
 @enduml

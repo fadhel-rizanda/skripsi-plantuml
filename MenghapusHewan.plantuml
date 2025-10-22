@@ -13,11 +13,10 @@ hide footbox
 ' === Participants ===
 actor Admin
 actor "Penyedia Hewan" as Provider
-participant "Next.js Pets Page" as FE
-participant "Laravel PetController" as BE
-database "PostgreSQL (DB)" as DB
-participant "Notification Service" as NS
-participant "Next.js (Penyedia)" as FE_Provider
+participant "Pets Page (Next.js FE)" as FE
+participant "PetController (Laravel BE)" as BE
+database "Database (PostgreSQL)" as DB
+participant "NotificationService (Laravel BE)" as NS
 
 ' === Flow A: Admin Menghapus Hewan ===
 group Admin Menghapus Hewan
@@ -49,24 +48,18 @@ group Admin Menghapus Hewan
 
         alt Penghapusan berhasil
             DB --> BE: OK (Row deleted)
+            ' Kirim notifikasi ke Penyedia Hewan
+            BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}
+            activate NS
+            NS -> Provider: Push notification "Your pet has been taken down by admin"
+            deactivate NS
             BE --> FE: 200 OK ("Pet deleted successfully")
+            deactivate BE
             FE -> FE: Perbarui daftar hewan di UI
             activate FE #LightBlue
             deactivate FE #LightBlue
             FE -> Admin: Tampilkan toast "Pet deleted successfully"
             deactivate FE
-
-            ' Kirim notifikasi ke Penyedia Hewan
-            BE -> NS: Kirim notifikasi ke penyedia hewan
-            deactivate BE
-            activate NS
-            NS -> FE_Provider: "Your pet has been taken down by admin"
-            deactivate NS
-            activate FE_Provider
-            FE_Provider -> FE_Provider: Tampilkan toast notifikasi "Your pet has been taken down"
-            activate FE_Provider #LightBlue
-            deactivate FE_Provider #LightBlue
-            deactivate FE_Provider
 
         else Gagal menghapus data
             DB --> BE: Error (Deletion failed)

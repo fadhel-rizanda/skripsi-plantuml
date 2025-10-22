@@ -11,19 +11,18 @@ skinparam sequence {
 hide footbox
 
 ' === Participants ===
-actor User
-participant "Next.js Pet List Page" as FE
-participant "Laravel PetController" as BE_Pet
-participant "Laravel FilterController" as BE_Filter
-participant "Redis (Cache)" as Redis
-database "PostgreSQL (DB)" as DB
+actor Pengguna
+participant "Pet List Page (Next.js FE)" as FE
+participant "PetController (Laravel BE)" as BE_Pet
+participant "FilterController (Laravel BE)" as BE_Filter
+participant "Cache (Redis)" as Redis
+database "Database (PostgreSQL)" as DB
 
 ' === Normal Flow: Melihat Daftar Hewan ===
-User -> FE: Klik menu "Find a Pet" pada navbar
+Pengguna -> FE: Klik menu "Find a Pet" pada navbar
 activate FE
 
 ' --- Paralel Request ---
-par Ambil daftar hewan
     FE -> BE_Pet: GET /api/pets
     deactivate FE
     activate BE_Pet
@@ -32,19 +31,18 @@ par Ambil daftar hewan
     DB --> BE_Pet: Return list of pets / null
     deactivate DB
 
-    alt Data hewan berhasil dimuat
-        BE_Pet --> FE: 200 OK (List of pets)
-        activate FE
-        FE -> User: Tampilkan daftar hewan
-        deactivate FE
-    else Gagal memuat data hewan
-        BE_Pet --> FE: 500 Internal Server Error ("Failed to load pets")
+    alt Gagal memuat data hewan
+        BE_Pet --> FE: 200 OK (Empty list)
         deactivate BE_Pet
         activate FE
-        FE -> User: Tampilkan pesan error "Failed to load pets"
-    end
+        FE -> Pengguna: Tampilkan pesan error "Failed to load pets"
+        deactivate FE
+    else Data hewan berhasil dimuat
+        BE_Pet --> FE: 200 OK (List of pets)
+        deactivate BE_Pet
+        activate FE
+        FE -> Pengguna: Tampilkan daftar hewan
 
-else Ambil data filter (spesies, umur, lokasi, tag)
     FE -> BE_Filter: GET /api/pet-filters
     activate BE_Filter
     BE_Filter -> Redis: GET cache:pet_filters
@@ -68,19 +66,18 @@ else Ambil data filter (spesies, umur, lokasi, tag)
         deactivate Redis
         BE_Filter --> FE: 200 OK (Filters from DB)
         deactivate BE_Filter
-    end
     FE -> FE:Simpan filter di FE
     activate FE #LightBlue
     deactivate FE #LightBlue
 end
 
 activate FE
-FE -> User: Tampilkan daftar hewan & filter (spesies, umur, lokasi)
+FE -> Pengguna: Tampilkan daftar hewan & filter
 deactivate FE
 
 
 ' === Flow: Menggunakan Filter atau Pencarian ===
-User -> FE: Masukkan kriteria (spesies, umur, tag, keyword)
+Pengguna -> FE: Masukkan kriteria filter
 activate FE
 FE -> BE_Pet: GET /api/pets?filter=...
 deactivate FE
@@ -92,12 +89,12 @@ deactivate DB
 BE_Pet --> FE: 200 OK (Filtered pets)
 deactivate BE_Pet
 activate FE
-FE -> User: Tampilkan hasil pencarian/filter
+FE -> Pengguna: Tampilkan hasil pencarian/filter
 deactivate FE
 
 
 ' === Flow: Melihat Detail Hewan ===
-User -> FE: Klik salah satu hewan dari daftar
+Pengguna -> FE: Klik salah satu hewan dari daftar
 activate FE
 FE -> BE_Pet: GET /api/pets/{pet_id}
 deactivate FE
@@ -110,13 +107,15 @@ deactivate DB
 alt Detail hewan ditemukan
     BE_Pet --> FE: 200 OK (Pet detail)
     activate FE
-    FE -> User: Tampilkan halaman detail hewan
+    FE -> Pengguna: Tampilkan halaman detail hewan
     deactivate FE
 else Hewan tidak ditemukan / telah dihapus
     BE_Pet --> FE: 404 Not Found ("Pet not found")
     deactivate BE_Pet
     activate FE
-    FE -> User: Tampilkan pesan error "Pet not found"
+    FE -> Pengguna: Tampilkan pesan error "Pet not found"
     deactivate FE
 end
+    end
+
 @enduml

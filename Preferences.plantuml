@@ -11,15 +11,15 @@ skinparam sequence {
 hide footbox
 
 ' === Participants ===
-actor User
-participant "Next.js Preferences Page" as FE
-participant "Laravel PreferencesController" as BE_Pref
-participant "Laravel FilterController" as BE_Filter
-participant "Redis (Cache)" as Redis
-database "PostgreSQL (DB)" as DB
+actor Pengguna
+participant "Preferences Page (Next.js FE)" as FE
+participant "PreferencesController (Laravel BE)" as BE_Pref
+participant "FilterController (Laravel BE)" as BE_Filter
+participant "Cache (Redis)" as Redis
+database "Database (PostgreSQL)" as DB
 
 ' === Normal Flow: Membuka Halaman Preferences ===
-User -> FE: Membuka halaman Preferences
+Pengguna -> FE: Membuka halaman Preferences
 activate FE
 
 ' --- Paralel Request ---
@@ -41,12 +41,9 @@ else Ambil data tag preferensi (personality, experience, pet type)
 
     alt Cache tersedia
         Redis --> BE_Filter: Return cached tags
-        BE_Filter --> FE: 200 OK (Cached tags)
-        deactivate BE_Filter
     else Cache kosong / expired
         Redis --> BE_Filter: Cache miss
         deactivate Redis
-        activate BE_Filter
         BE_Filter -> DB: Mengambil semua data tag dari tabel referensi
         activate DB
         DB --> BE_Filter: Return preference tags data
@@ -55,29 +52,26 @@ else Ambil data tag preferensi (personality, experience, pet type)
         activate Redis
         Redis --> BE_Filter: OK
         deactivate Redis
-        BE_Filter --> FE: 200 OK (Tags from DB)
-        deactivate BE_Filter
     end
+        BE_Filter --> FE: 200 OK (Tags data)
+        deactivate BE_Filter
     FE -> FE: Simpan tags di FE state
     activate FE #LightBlue
     deactivate FE #LightBlue
 end
 
 activate FE
-FE -> User: Tampilkan form preferensi dengan opsi (personality, pengalaman, preferensi hewan)
+FE -> Pengguna: Tampilkan form preferensi dengan opsi (personality, pengalaman, preferensi hewan)
 deactivate FE
 
 
 ' === User Mengisi Form ===
-User -> FE: Mengisi personality, pengalaman, dan preferensi hewan
+Pengguna -> FE: Mengisi personality, pengalaman, dan preferensi hewan
 activate FE
 FE -> BE_Pref: POST /api/preferences {data_preferensi}
 deactivate FE
 activate BE_Pref
 
-BE_Pref -> BE_Pref: Validasi data (lengkap & format benar)
-activate BE_Pref #LightBlue
-deactivate BE_Pref #LightBlue
 
 alt Data valid
     BE_Pref -> DB: Simpan data preferences untuk user
@@ -86,7 +80,7 @@ alt Data valid
         DB --> BE_Pref: OK (Preferences saved)
         BE_Pref --> FE: 200 OK ("Preferences saved")
         activate FE
-        FE -> User: Arahkan ke halaman Dashboard
+        FE -> Pengguna: Arahkan ke halaman Dashboard
         deactivate FE
     else Gagal menyimpan ke database
         DB --> BE_Pref: Error (Insert failed / DB unreachable)
@@ -94,24 +88,24 @@ alt Data valid
         BE_Pref --> FE: 500 Internal Server Error ("Failed to save preferences")
         deactivate BE_Pref
         activate FE
-        FE -> User: Tampilkan pesan error ("Failed to save preferences. Please try again.")"
+        FE -> Pengguna: Tampilkan pesan error ("Failed to save preferences. Please try again.")"
         deactivate FE
     end
 else Data tidak valid
     BE_Pref --> FE: 400 Bad Request ("Invalid data")
     deactivate BE_Pref
     activate FE
-    FE -> User: Tampilkan pesan error "Invalid data. Please check your input."
+    FE -> Pengguna: Tampilkan pesan error "Invalid data. Please check your input."
     deactivate FE
 end
 
 
 
 ' === Alternate: Skip for later ===
-alt User memilih "Skip for later"
-    User -> FE: Klik "Skip for later"
+alt Pengguna memilih "Skip for later"
+    Pengguna -> FE: Klik "Skip for later"
     activate FE
-    FE -> User: Arahkan ke halaman Dashboard tanpa menyimpan preferensi
+    FE -> Pengguna: Arahkan ke halaman Dashboard tanpa menyimpan preferensi
     deactivate FE
 end
 @enduml

@@ -12,9 +12,11 @@ hide footbox
 
 ' === Participants ===
 actor "Calon Pengadopsi" as Adopter
-participant "Next.js Pet Detail Page" as FE
-participant "Laravel AdoptionController" as BE
-database "PostgreSQL (DB)" as DB
+participant "Pet Detail Page (Next.js FE)" as FE
+participant "AdoptionController (Laravel BE)" as BE
+database "Database (PostgreSQL)" as DB
+participant "NotificationService (Laravel BE)" as NS
+actor "Penyedia Hewan" as FE_Adopter
 
 title Mengadopsi Hewan (Overview)
 
@@ -25,16 +27,18 @@ FE -> BE: POST /api/adoptions {pet_id, user_id}
 deactivate FE
 activate BE
 
-BE -> BE: Validasi user profile lengkap & pet tersedia
-activate BE #LightBlue
-deactivate BE #LightBlue
-
 alt Validasi berhasil (profile lengkap & pet tersedia)
     BE -> DB: Buat adoption application (status: "Application Submitted")
+    deactivate BE
     activate DB
 
     alt Application berhasil dibuat
         DB --> BE: OK (Application created)
+        activate BE
+        BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}
+        activate NS
+        NS -> FE_Adopter: Push notification "Congratulations! Your adoption has been completed"
+        deactivate NS
         BE --> FE: 201 Created (Application detail)
         deactivate BE
         activate FE
@@ -42,28 +46,15 @@ alt Validasi berhasil (profile lengkap & pet tersedia)
         deactivate FE
 
     else Gagal membuat application (DB error)
-        DB --> BE: Error response
+        DB --> BE: Error (e.g., constraint violation / connection failure)
         deactivate DB
         activate BE
         BE --> FE: 500 Internal Server Error ("Failed to create application")
+        deactivate BE
         activate FE
         FE -> Adopter: Tampilkan pesan error "Failed to create adoption application"
         deactivate FE
     end
-
-else Profile tidak lengkap
-    BE --> FE: 400 Bad Request ("Profile must be completed")
-    activate FE
-    FE -> Adopter: Tampilkan pesan "Your profile must be completed before adoption"
-    deactivate FE
-
-else Hewan tidak tersedia
-    BE --> FE: 409 Conflict ("Pet not available")
-    deactivate BE
-    activate FE
-    FE -> Adopter: Tampilkan pesan "This pet is no longer available for adoption"
-    deactivate FE
-end
 
 
 ' === Flow 2: Melihat Progress Adopsi ===

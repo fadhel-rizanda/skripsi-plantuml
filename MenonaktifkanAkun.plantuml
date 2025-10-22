@@ -12,12 +12,10 @@ hide footbox
 
 ' === Participants ===
 actor Admin
-participant "Next.js Users Page" as FE
-participant "Laravel UserController" as BE
-database "PostgreSQL (DB)" as DB
-participant "Notification Service" as NS
-participant "Email Service" as ES
-participant "Next.js (User)" as FE_User
+participant "Users Page (Next.js FE)" as FE
+participant "UserController (Laravel BE)" as BE
+database "Database (PostgreSQL)" as DB
+participant "EmailService (Laravel BE)" as ES
 
 ' === Akses Data Pengguna ===
     Admin -> FE: Klik menu "Users" pada navbar
@@ -55,7 +53,16 @@ participant "Next.js (User)" as FE_User
 
         alt Penonaktifan berhasil
             DB --> BE: OK (Status updated)
+            ' === Kirim notifikasi ke pengguna terkait ===
+            BE -> ES: Kirim email notifikasi penonaktifan akun
+            activate ES
+            ES -> ES: Kirim email ke alamat email pengguna
+            activate ES #LightBlue
+            deactivate ES #LightBlue
+            deactivate ES
+
             BE --> FE: 200 OK ("User account deactivated successfully")
+            deactivate BE
 
             FE -> FE: Perbarui daftar pengguna di UI
             activate FE #LightBlue
@@ -64,29 +71,7 @@ participant "Next.js (User)" as FE_User
             FE -> Admin: Tampilkan toast "User account deactivated successfully"
             deactivate FE
 
-            ' === Kirim notifikasi ke pengguna terkait ===
-            BE -> NS: Kirim notifikasi ke pengguna yang dinonaktifkan
-            activate NS
-            BE -> ES: Kirim email notifikasi penonaktifan akun
-            deactivate BE
-            activate ES
-            ES -> ES: Kirim email ke alamat email pengguna
-            activate ES #LightBlue
-            deactivate ES #LightBlue
-            deactivate ES
 
-            NS -> FE_User: "Your account has been deactivated by admin"
-            deactivate NS
-
-
-            activate FE_User
-            FE_User -> FE_User: Tampilkan notifikasi "Your account has been deactivated"
-            activate FE_User #LightBlue
-            deactivate FE_User #LightBlue
-            FE_User -> FE_User: Logout dan redirect ke halaman login
-            activate FE_User #LightBlue
-            deactivate FE_User #LightBlue
-            deactivate FE_User
 
         else Gagal memperbarui status
             DB --> BE: Error (Update failed)

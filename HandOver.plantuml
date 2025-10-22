@@ -11,11 +11,11 @@ skinparam sequence {
 hide footbox
 
 ' === Participants ===
-actor "User (Calon Pengadopsi / Penyedia Hewan)" as User
-participant "Next.js FE (Handover Day Page)" as FE
-participant "HandoverController" as BE
+actor "Pengguna" as User
+participant "Handover Day Page (Next.js FE)" as FE
+participant "HandoverController (Laravel BE)" as BE
 participant "Cloud Storage (S3)" as Storage
-database "Database" as DB
+database "Database (PostgreSQL)" as DB
 actor "Admin" as Admin
 
 '== Membuka Halaman Handover Day ==
@@ -95,24 +95,24 @@ else Upload berhasil
     activate FE
 end
 
-FE -> BE: POST /api/adoptions/{id}/handover-proof {file-metadata}
+FE -> BE: POST /api/adoptions/{id}/handover-proof {proof data}
 deactivate FE
 activate BE
-BE -> DB: Simpan metadata file dan update status "Proof Uploaded"
+BE -> DB: Simpan data proof dan update status "Proof Uploaded"
 activate DB
 
-alt Gagal simpan metadata
+alt Gagal simpan data proof
     DB --> BE: Error response (e.g., constraint violation / connection failure)
     BE --> FE: 500 Internal Server Error ("Failed to save record")
     deactivate BE
     activate FE
     FE -> User: Tampilkan pesan "Upload completed but failed to save record. Contact support."
     deactivate FE
-else Metadata berhasil disimpan
-    DB --> BE: Success (Metadata saved))
+else Proof berhasil disimpan
+    DB --> BE: Success (Proof saved))
     deactivate DB
     activate BE
-    BE --> FE: 201 Created (Metadata saved)
+    BE --> FE: 201 Created (Proof saved)
     deactivate BE
     activate FE
     FE -> User: Tampilkan pesan "Proof uploaded successfully"
@@ -130,7 +130,7 @@ deactivate BE
 activate DB
 
 alt Gagal update status
-    DB --> BE: Error response (e.g., constraint violation / connection failure)
+    DB --> BE: (e.g., constraint violation / data not found / connection failure)
     activate BE
     BE --> FE: 500 Internal Server Error ("Failed to update status")
     deactivate BE

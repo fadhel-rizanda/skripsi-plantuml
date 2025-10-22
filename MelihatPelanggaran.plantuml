@@ -12,9 +12,9 @@ hide footbox
 
 ' === Participants ===
 actor Admin
-participant "Next.js Reports Page" as FE
-participant "Laravel ReportController" as BE
-database "PostgreSQL (DB)" as DB
+participant "Reports Page (Next.js FE)" as FE
+participant "ReportController (laravel BE)" as BE
+database "Database (PostgreSQL)" as DB
 
 ' === Melihat Daftar Laporan ===
 Admin -> FE: Klik menu "Reports" pada navbar
@@ -55,6 +55,7 @@ deactivate FE
         activate FE
         FE -> FE: Validasi model tindakan (cek input & status laporan)
         FE -> BE: POST /api/reports/{id}/action (body: {action_type})
+        deactivate FE
         activate BE
         BE -> DB: Perbarui status laporan sesuai model tindakan
         activate DB
@@ -63,11 +64,12 @@ deactivate FE
             DB --> BE: OK (Status updated)
             BE --> FE: 200 OK (Tindakan berhasil)
             deactivate BE
+            activate FE
             FE -> Admin: Tampilkan notifikasi sukses dan perbarui tampilan
             deactivate FE
 
         else Pembaruan gagal
-            DB --> BE: Error (Update failed)
+            DB --> BE: Error (e.g., constraint violation / data not found / connection failure)
             deactivate DB
             activate BE
             BE --> FE: 500 Internal Server Error ("Failed to process report")

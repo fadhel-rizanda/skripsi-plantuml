@@ -12,10 +12,10 @@ hide footbox
 
 actor "Calon Pengadopsi" as Adopter
 actor "Penyedia Hewan" as Provider
-participant "Next.js FE (Application Reviewed Page)" as FE
-participant "FileUploadController" as BE
+participant "Application Reviewed Page (Next.js FE)" as FE
+participant "FileUploadController (Laravel BE)" as BE
 participant "Cloud Storage (S3)" as Storage
-database "Database" as DB
+database "Database(PostgreSQL)" as DB
 
 '== Membuka Halaman Application Reviewed ==
 Adopter -> FE: Buka tab "Application Reviewed"
@@ -34,11 +34,11 @@ deactivate FE
 '== Mengunggah Dokumen Requirement ==
 Adopter -> FE: Tekan tombol "Upload File" dan masukan file terkait
 activate FE
-FE -> BE: GET /api/file-upload/presigned-url?requirementId={id}
+FE -> BE: GET /api/file-upload/presigned-url
 deactivate FE
 activate BE
 
-alt Gagal generate pre-signed URL
+alt Gagal generate URL
     BE --> FE: 500 Internal Server Error ("Failed to generate URL")
     activate FE
     FE -> Adopter: Tampilkan pesan "Failed to prepare upload. Try again."
@@ -63,7 +63,7 @@ else Upload berhasil
     activate FE
 end
 
-FE -> BE: POST /api/adoptions/{id}/requirements/{reqId}/upload-complete
+FE -> BE: POST /api/adoptions/{id}/requirements/{reqId}/upload (Requirement + Metadata data)
 deactivate FE
 activate BE
 BE -> DB: Simpan data upload dan update status "Reviewed"
@@ -72,7 +72,7 @@ activate DB
 alt Gagal simpan metadata
     DB --> BE: Error response (e.g., constraint violation / connection failure)
     activate BE
-    BE --> FE: 500 Internal Server Error ("Failed to save metadata")
+    BE --> FE: 500 Internal Server Error ("Failed to save requirement")
     deactivate BE
     activate FE
     FE -> Adopter: Tampilkan pesan "Upload completed but failed to save. Contact support."
@@ -159,8 +159,8 @@ alt Penyedia memilih Decline
         deactivate FE
     else Update berhasil
         DB --> BE: Success (Status updated)
-        activate BE
         deactivate DB
+        activate BE
         BE -> Adopter: Kirim notifikasi "Document declined"
         deactivate BE
 '        note right of Adopter

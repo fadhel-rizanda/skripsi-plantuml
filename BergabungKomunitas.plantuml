@@ -11,10 +11,10 @@ skinparam sequence {
 hide footbox
 
 ' === Participants ===
-actor "User" as Pengguna
-participant "Next.js Community Page" as FE
-participant "Laravel CommunityController" as BE
-database "PostgreSQL (DB)" as DB
+actor "Pengguna" as Pengguna
+participant "Community Page (Next.js FE)" as FE
+participant "CommunityController (Laravel BE)" as BE
+database "Database (PostgreSQL)" as DB
 
 
 ' === Flow 1: Membuka Halaman Komunitas ===
@@ -44,7 +44,7 @@ BE -> DB: Tambahkan pengguna ke daftar anggota komunitas
 activate DB
 
 alt Gagal menyimpan data ke DB (constraint / koneksi gagal)
-    DB --> BE: Error (insert failed)
+    DB --> BE: Error (e.g., constraint violation / connection failure)
     BE --> FE: 500 Internal Server Error ("Failed to join community")
     deactivate BE
     activate FE
@@ -72,7 +72,7 @@ BE -> DB: Hapus pengguna dari daftar anggota komunitas
 activate DB
 
 alt Gagal menghapus data (record tidak ditemukan / koneksi gagal)
-    DB --> BE: Error (delete failed)
+    DB --> BE: Error (e.g., data not found / connection failure)
     BE --> FE: 500 Internal Server Error ("Failed to leave community")
     deactivate BE
     activate FE
