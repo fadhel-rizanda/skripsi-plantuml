@@ -39,11 +39,8 @@ else Valid input
     BE -> DB: Cek email/username sudah terdaftar?
     activate DB
     DB --> BE: Tidak ditemukan (OK)
-    deactivate DB
     BE -> DB: Membuat data user baru dengan is_verified=false
-    activate DB
     DB --> BE: OK (User created)
-    deactivate DB
 
     BE -> Redis: SET OTP:{email} = generated_code (expired 5 menit)
     activate Redis
@@ -65,9 +62,7 @@ else Valid input
     deactivate FE
 
     else Email or username already exists
-        activate DB
-        DB --> BE: Conflict
-        deactivate DB
+        DB --> BE: Error (e.g., constraint violation / connection failure)
         activate BE
         BE --> FE: 409 Conflict ("Email or username already exists")
         deactivate BE
@@ -77,13 +72,14 @@ else Valid input
 
     else Failed to send email
         activate Mailer
-        Mailer --> BE: Error
+        Mailer --> BE: Error (e.g., constraint violation / connection failure)
+    deactivate DB
         deactivate Mailer
         activate BE
-        BE --> FE: "Failed to send verification email")
+        BE --> FE: 500 Internal Server Error ("Failed to send verification email")
         deactivate BE
         activate FE
-        FE -> Pengguna: Show error message ("Failed to send email")
+        FE -> Pengguna: tampilkan pesan error ("Failed to send verification email")
         deactivate FE
 end
 
@@ -118,7 +114,7 @@ alt Pengguna pilih "Verify Code"
         BE --> FE: 200 OK (Akun terverifikasi)
         deactivate BE
         activate FE
-        FE -> Pengguna: Tampilkan notifikasi sukses verifikasi akun
+        FE -> Pengguna: Tampilkan pesan sukses verifikasi akun
         deactivate FE
 
     else OTP tidak cocok atau kadaluarsa
@@ -152,12 +148,12 @@ Google --> FE: Return OAuth Credential (id_token, email, name)
 deactivate Google
 
 FE -> BE: POST /api/login/google { id_token }
+deactivate FE
 activate BE
 BE -> Google: Validasi id_token
 activate Google
 Google --> BE: Valid (user info)
 deactivate Google
-deactivate FE
 BE -> DB: Mencari data user berdasarkan email
 deactivate BE
 
@@ -172,9 +168,9 @@ alt Pengguna sudah terdaftar
     DB --> BE: OK (role assigned)
     deactivate DB
 
-    activate FE
     BE --> FE: 200 OK (Pengguna data, Auth token)
     deactivate BE
+    activate FE
     FE -> FE: Simpan Auth token dan user data
     activate FE #LightBlue
     deactivate FE
@@ -184,7 +180,7 @@ alt Pengguna sudah terdaftar
 
 else Pengguna belum terdaftar
     activate DB
-    DB --> BE: Pengguna not found
+    DB --> BE: User not found
     deactivate DB
     activate BE
     BE -> DB: Membuat data user baru dengan is_verified=true
@@ -201,9 +197,9 @@ else Pengguna belum terdaftar
     DB --> BE: OK (role assigned)
     deactivate DB
 
-    activate FE
     BE --> FE: 201 Created (Pengguna data, Auth token)
     deactivate BE
+    activate FE
     FE -> FE: Simpan Auth token dan user data
     activate FE #LightBlue
     deactivate FE
