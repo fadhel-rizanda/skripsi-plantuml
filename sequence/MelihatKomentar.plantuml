@@ -23,16 +23,20 @@ FE -> BE: GET /api/posts/{post_id}/comments
 deactivate FE
 activate BE
 BE -> DB: Mengambil komentar berdasarkan post_id
+deactivate BE
 activate DB
-DB --> BE: Return list of comments / null
-deactivate DB
-
 alt Komentar tersedia
+DB --> BE: Return list of comments
+activate BE
     BE --> FE: 200 OK (List of comments)
+    deactivate BE
     activate FE
     FE -> Pengguna: Tampilkan daftar komentar dan balasan
     deactivate FE
 else Tidak ada komentar
+DB --> BE: Return empty list
+deactivate DB
+activate BE
     BE --> FE: 200 OK (Empty list)
     deactivate BE
     activate FE

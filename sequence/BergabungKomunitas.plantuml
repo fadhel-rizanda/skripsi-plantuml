@@ -41,17 +41,19 @@ FE -> BE: POST /api/communities/{community_id}/join
 deactivate FE
 activate BE
 BE -> DB: Tambahkan pengguna ke daftar anggota komunitas
+deactivate BE
 activate DB
 
 alt Gagal menyimpan data ke DB (constraint / koneksi gagal)
     DB --> BE: Error (e.g., constraint violation / connection failure)
+    activate BE
     BE --> FE: 500 Internal Server Error ("Failed to join community")
     deactivate BE
     activate FE
     FE -> Pengguna: Tampilkan pesan error "Failed to join community"
     deactivate FE
 else Berhasil menyimpan data
-    DB --> BE: OK (User joined)
+    DB --> BE: Success (User joined)
     deactivate DB
     activate BE
     BE --> FE: 200 OK ("Successfully joined the community")
@@ -69,17 +71,19 @@ FE -> BE: DELETE /api/communities/{community_id}/leave
 deactivate FE
 activate BE
 BE -> DB: Hapus pengguna dari daftar anggota komunitas
+deactivate BE
 activate DB
 
 alt Gagal menghapus data (record tidak ditemukan / koneksi gagal)
     DB --> BE: Error (e.g., data not found / connection failure)
+    activate BE
     BE --> FE: 500 Internal Server Error ("Failed to leave community")
     deactivate BE
     activate FE
     FE -> Pengguna: Tampilkan pesan error "Failed to leave community"
     deactivate FE
 else Berhasil menghapus data
-    DB --> BE: OK (User removed)
+    DB --> BE: Success (User removed)
     deactivate DB
     activate BE
     BE --> FE: 200 OK ("Successfully left the community")

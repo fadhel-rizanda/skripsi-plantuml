@@ -47,12 +47,15 @@ participant "EmailService (Laravel BE)" as ES
         Admin -> FE: Klik "Continue"
         activate FE
         FE -> BE: PUT /api/users/{id}/deactivate
+        deactivate FE
         activate BE
         BE -> DB: Update status akun pengguna menjadi "Deactivated"
+        deactivate BE
         activate DB
 
         alt Penonaktifan berhasil
-            DB --> BE: OK (Status updated)
+            DB --> BE: Success (Status updated)
+            activate BE
             ' === Kirim notifikasi ke pengguna terkait ===
             BE -> ES: Kirim email notifikasi penonaktifan akun
             activate ES
@@ -63,24 +66,25 @@ participant "EmailService (Laravel BE)" as ES
 
             BE --> FE: 200 OK ("User account deactivated successfully")
             deactivate BE
+            activate FE
 
             FE -> FE: Perbarui daftar pengguna di UI
             activate FE #LightBlue
             deactivate FE #LightBlue
 
-            FE -> Admin: Tampilkan toast "User account deactivated successfully"
+            FE -> Admin: Tampilkan pesan "User account deactivated successfully"
             deactivate FE
 
 
 
         else Gagal memperbarui status
-            DB --> BE: Error (Update failed)
+            DB --> BE: Error (e.g., constraint violation / data not found / connection failure)
             deactivate DB
             activate BE
             BE --> FE: 500 Internal Server Error ("Failed to deactivate account")
             deactivate BE
             activate FE
-            FE -> Admin: Tampilkan toast "Failed to terminate account. Please try again"
+            FE -> Admin: Tampilkan pesan "Failed to terminate account. Please try again"
             deactivate FE
         end
 

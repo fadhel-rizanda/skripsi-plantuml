@@ -53,11 +53,11 @@ FE -> BE: POST /api/adoptions/{id}/meet-proposal {date, time, location}
 deactivate FE
 activate BE
 BE -> DB: Simpan proposal jadwal baru
+deactivate BE
 activate DB
-
 alt Proposal berhasil disimpan
-        DB --> BE: OK (Proposal saved)
-
+        DB --> BE: Success (Proposal saved)
+        activate BE
         BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}"
         activate NS
         NS -> FE_Other: Push notification "You have received a new Meet & Greet proposal"
@@ -94,10 +94,12 @@ alt Pengguna memilih "Accept Proposal"
     deactivate FE
     activate BE
     BE -> DB: Perbarui status proposal menjadi "accepted"
+    deactivate BE
     activate DB
 
     alt Pembaruan berhasil
-        DB --> BE: OK (Status updated)
+        DB --> BE: Success (Status updated)
+        activate BE
 
         BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}"
         activate NS
@@ -108,7 +110,7 @@ alt Pengguna memilih "Accept Proposal"
         BE --> FE: 200 OK ("Proposal accepted")
         deactivate BE
         activate FE
-        FE -> Pengguna: Tampilkan notifikasi sukses dan perbarui tampilan
+        FE -> Pengguna: Tampilkan pesan "Status updated successfully"
         deactivate FE
 
     else Pembaruan gagal (DB error)
@@ -129,11 +131,12 @@ else Pengguna memilih "Propose New Time/Location"
     deactivate FE
     activate BE
     BE -> DB: Simpan proposal baru
+    deactivate BE
     activate DB
 
     alt Proposal tersimpan
-            DB --> BE: OK (Proposal saved)
-
+            DB --> BE: Success (Proposal saved)
+            activate BE
             BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}"
             activate NS
             NS -> FE_Other: Push notification "A new Meet & Greet proposal has been submitted"
@@ -143,7 +146,7 @@ else Pengguna memilih "Propose New Time/Location"
             BE --> FE: 200 OK ("New proposal submitted")
             deactivate BE
             activate FE
-            FE -> Pengguna: Tampilkan notifikasi sukses
+            FE -> Pengguna: Tampilkan pesan "Propose submitted successfully"
             deactivate FE
 
         else Gagal menyimpan proposal (DB error)

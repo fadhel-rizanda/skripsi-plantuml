@@ -27,17 +27,22 @@ activate FE
     deactivate FE
     activate BE_Pet
     BE_Pet -> DB: Mencari semua hewan yang tersedia
+    deactivate BE_Pet
     activate DB
-    DB --> BE_Pet: Return list of pets / null
-    deactivate DB
 
     alt Gagal memuat data hewan
+    DB --> BE_Pet: Return empty list
+    activate BE_Pet
+
         BE_Pet --> FE: 200 OK (Empty list)
         deactivate BE_Pet
         activate FE
         FE -> Pengguna: Tampilkan pesan error "Failed to load pets"
         deactivate FE
     else Data hewan berhasil dimuat
+        DB --> BE_Pet: Return list of pets
+        deactivate DB
+        activate BE_Pet
         BE_Pet --> FE: 200 OK (List of pets)
         deactivate BE_Pet
         activate FE
@@ -84,7 +89,7 @@ deactivate FE
 activate BE_Pet
 BE_Pet -> DB: Mencari semua hewan berdasarkan kriteria
 activate DB
-DB --> BE_Pet: Return filtered pets / null
+DB --> BE_Pet: Return filtered pets
 deactivate DB
 BE_Pet --> FE: 200 OK (Filtered pets)
 deactivate BE_Pet
@@ -100,16 +105,21 @@ FE -> BE_Pet: GET /api/pets/{pet_id}
 deactivate FE
 activate BE_Pet
 BE_Pet -> DB: Mencari detail hewan berdasarkan pet_id
+deactivate BE_Pet
 activate DB
-DB --> BE_Pet: Return pet detail / null
-deactivate DB
 
 alt Detail hewan ditemukan
+    DB --> BE_Pet: Return pet detail
+    activate BE_Pet
     BE_Pet --> FE: 200 OK (Pet detail)
+    deactivate BE_Pet
     activate FE
     FE -> Pengguna: Tampilkan halaman detail hewan
     deactivate FE
 else Hewan tidak ditemukan / telah dihapus
+    DB --> BE_Pet: Error (e.g., data not found / connection failure)
+    deactivate DB
+    activate BE_Pet
     BE_Pet --> FE: 404 Not Found ("Pet not found")
     deactivate BE_Pet
     activate FE

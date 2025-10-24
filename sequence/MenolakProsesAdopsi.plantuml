@@ -41,7 +41,7 @@ actor "Pengguna (Calon Pengadopsi & Penyedia Hewan)" as FE_Adopter
         activate DB
         DB --> BE: Return adoption process details
         deactivate DB
-        BE --> FE: 200 OK (Adoption process details)
+        BE --> FE: 200 OK (Detail proses adopsi)
         deactivate BE
         FE -> Admin: Tampilkan halaman detail dengan tombol "Reject"
         deactivate FE
@@ -62,25 +62,30 @@ actor "Pengguna (Calon Pengadopsi & Penyedia Hewan)" as FE_Adopter
         Admin -> FE: Klik "Continue"
         activate FE
         FE -> BE: PUT /api/adoptions/{id}/reject
+        deactivate FE
         activate BE
         BE -> DB: Update status proses adopsi menjadi "Rejected"
+        deactivate BE
         activate DB
 
         alt Penolakan berhasil
-            DB --> BE: OK (Status updated)
+            DB --> BE: Success (Status updated)
+            activate BE
             ' === Kirim notifikasi ke pihak terkait ===
             BE -> NS: Broadcast event "MessageSent" ke channel "chat.{room_id}"
             activate NS
             NS -> FE_Adopter: Push notification "Your adoption process has been rejected by admin"
+        NS --> BE: Event broadcasted
             deactivate NS
             BE --> FE: 200 OK ("Adoption process rejected successfully")
             deactivate BE
+            activate FE
 
             FE -> Admin: Tampilkan pesan "Adoption process rejected successfully"
             deactivate FE
 
         else Gagal memperbarui status
-            DB --> BE: Error (Update failed)
+            DB --> BE: Error (e.g., constraint violation / data not found / connection failure)
             deactivate DB
             activate BE
             BE --> FE: 500 Internal Server Error ("Failed to reject adoption process")

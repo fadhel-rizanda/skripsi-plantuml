@@ -25,20 +25,25 @@ FE -> BE: GET /api/notifications
 deactivate FE
 activate BE
 BE -> DB: Ambil daftar notifikasi berdasarkan user_id
-activate DB
-DB --> BE: Return list of notifications / null
-deactivate DB
-
+deactivate BE
 alt Tidak ada notifikasi baru
+activate DB
+DB --> BE: Return Empty list
+activate BE
     BE --> FE: 200 OK (Empty list)
     deactivate BE
     activate FE
     FE -> Pengguna: Tampilkan pesan "No new notifications"
     deactivate FE
 else Notifikasi tersedia
+DB --> BE: Return list of notifications
+deactivate DB
+activate BE
     BE --> FE: 200 OK (List of notifications)
+deactivate BE
+
     activate FE
-    FE -> Pengguna: Tampilkan drawer berisi daftar notifikasi
+    FE -> Pengguna: Tampilkan daftar notifikasi
     deactivate FE
 ' === Subflow S-1: Membuka Notifikasi ===
 Pengguna -> FE: Klik salah satu notifikasi dari daftar
@@ -49,20 +54,20 @@ activate BE
 BE -> DB: Update notifikasi dengan is_read = true
 activate DB
 alt Berhasil update
-    DB --> BE: OK (updated)
+    DB --> BE: Success (updated)
     BE --> FE: 200 OK ("Notification marked as read")
     deactivate BE
     activate FE
     FE -> Pengguna: Tandai notifikasi sebagai terbaca dan arahkan ke halaman terkait
     deactivate FE
 else Gagal update notifikasi
-    DB --> BE: Error (Update failed / DB unreachable)
+    DB --> BE: Error (e.g., constraint violation / data not found / connection failure)
     deactivate DB
     activate BE
     BE --> FE: 500 Internal Server Error ("Failed to update notification status")
     deactivate BE
     activate FE
-    FE -> Pengguna: Tampilkan pesan error "Gagal menandai notifikasi sebagai terbaca"
+    FE -> Pengguna: Tampilkan pesan "Failed to update notification status"
     deactivate FE
 end
 end

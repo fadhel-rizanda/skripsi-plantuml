@@ -70,24 +70,29 @@ actor "Pengguna (Calon Pengadopsi & Penyedia Hewan)" as FE_Adopter
         Admin -> FE: Klik "Continue"
         activate FE
         FE -> BE: PUT /api/adoptions/{id}/finalize
+        deactivate FE
         activate BE
         BE -> DB: Update status proses adopsi menjadi "Completed"
+        deactivate BE
         activate DB
 
         alt Finalisasi berhasil
             DB --> BE: OK (Status updated)
+            activate BE
 
-            FE -> Admin: Tampilkan pesan "Adoption process finalized successfully"
             deactivate FE
 
             ' === Kirim notifikasi ke pihak terkait ===
             BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}
             activate NS
             NS -> FE_Adopter: Push notification "Congratulations! Your adoption has been completed"
+            NS --> BE: Event broadcasted
             deactivate NS
             BE --> FE: 200 OK ("Adoption process finalized successfully")
             deactivate BE
-
+            activate FE
+            FE -> Admin: Tampilkan pesan "Adoption process finalized successfully"
+            deactivate FE
         else Gagal memperbarui status
             DB --> BE: Error (Update failed)
             deactivate DB

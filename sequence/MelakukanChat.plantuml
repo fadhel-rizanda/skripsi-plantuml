@@ -36,12 +36,12 @@ else Chat room belum ada
     activate DB
 
     alt Room berhasil dibuat
-        DB --> BE: OK (Chat room created)
+        DB --> BE: Success (Chat room created)
         BE --> FE: 201 Created (New chat room detail)
         deactivate BE
 
     else Gagal membuat room (DB error)
-        DB --> BE: Error response
+        DB --> BE: Error (e.g., constraint violation / connection failure)
         deactivate DB
         activate BE
         BE --> FE: 500 Internal Server Error ("Failed to create chat room")
@@ -93,7 +93,7 @@ else Validasi berhasil
     activate DB
 
     alt Pesan berhasil disimpan
-        DB --> BE: OK (Message saved)
+        DB --> BE: Success (Message saved)
 
         BE -> Reverb: Broadcast event "MessageSent" ke channel "chat.{room_id}"
         activate Reverb
@@ -108,7 +108,7 @@ else Validasi berhasil
         deactivate FE
 
     else Gagal menyimpan pesan (DB error)
-        DB --> BE: Error response
+        DB --> BE: Error (e.g., constraint violation / connection failure)
         deactivate DB
         activate BE
         BE --> FE: 500 Internal Server Error ("Failed to send message")

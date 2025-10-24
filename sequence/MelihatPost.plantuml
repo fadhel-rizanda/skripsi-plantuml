@@ -27,18 +27,22 @@ activate FE
     deactivate FE
     activate BE_Post
     BE_Post -> DB: Mengambil semua data post
+    deactivate BE_Post
     activate DB
-    DB --> BE_Post: Return list of posts / null
-    deactivate DB
-
     alt Gagal memuat data post
+    DB --> BE_Post: Return Empty list
+    activate BE_Post
         BE_Post --> FE: 200 OK (Empty list)
         deactivate BE_Post
         activate FE
         FE -> Pengguna: Tampilkan pesan error "Failed to load posts"
         deactivate FE
     else Data post berhasil dimuat
+        DB --> BE_Post: Return list of posts
+    activate BE_Post
+        deactivate DB
         BE_Post --> FE: 200 OK (List of posts)
+        deactivate BE_Post
         activate FE
         FE -> Pengguna: Tampilkan daftar postingan
 
@@ -83,7 +87,7 @@ deactivate FE
 activate BE_Post
 BE_Post -> DB: Mengambil semua data post berdasarkan filter
 activate DB
-DB --> BE_Post: Return filtered posts / null
+DB --> BE_Post: Return filtered posts
 deactivate DB
 BE_Post --> FE: 200 OK (Filtered posts)
 deactivate BE_Post
@@ -99,7 +103,7 @@ deactivate FE
 activate BE_Post
 BE_Post -> DB: Mengambil data post berdasarkan post_id
 activate DB
-DB --> BE_Post: Return post detail / null
+DB --> BE_Post: Return post detail
 deactivate DB
 
 alt Post ditemukan
@@ -113,9 +117,10 @@ alt Post ditemukan
     FE -> BE_Post: GET /api/posts/{post_id}/comments
     activate BE_Post
     BE_Post -> DB: Mengambil semua data komentar berdasarkan post_id
+    deactivate BE_Post
     activate DB
     DB --> BE_Post: Return list of comments
-    deactivate DB
+    activate BE_Post
     BE_Post --> FE: 200 OK (Comments list)
     deactivate BE_Post
     activate FE
@@ -123,6 +128,10 @@ alt Post ditemukan
     deactivate FE
 
 else Post tidak ditemukan / telah dihapus
+DB --> BE_Post: Error (e.g., data not found / connection failure)
+    deactivate DB
+    activate BE_Post
+
     BE_Post --> FE: 404 Not Found ("Post not found")
     deactivate BE_Post
     activate FE

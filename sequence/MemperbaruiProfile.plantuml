@@ -24,20 +24,25 @@ FE -> BE: GET /api/profile/{user_id}
 deactivate FE
 activate BE
 BE -> DB: Ambil data profil berdasarkan user_id
+deactivate BE
 activate DB
-DB --> BE: Return data profil / null
-deactivate DB
-
 alt Data profil ditemukan
+DB --> BE: Return data profil
+activate BE
     BE --> FE: 200 OK (Profile data)
+    deactivate BE
     activate FE
     FE -> Pengguna: Tampilkan data profil dan tombol "Edit" jika user_id cocok
     deactivate FE
 else Profil tidak ditemukan
+DB --> BE: Error (e.g., data not found / connection failure)
+
+deactivate DB
+    activate BE
     BE --> FE: 404 Not Found ("Profile not found")
     deactivate BE
     activate FE
-    FE -> Pengguna: Tampilkan pesan error "Profile not found"
+    FE -> Pengguna: Tampilkan pesan "Profile not found"
     deactivate FE
 end
 
@@ -58,22 +63,22 @@ activate BE
     activate DB
 
     alt Update berhasil
-        DB --> BE: OK (Profile updated)
+        DB --> BE: Success (Profile updated)
     activate BE
         BE --> FE: 200 OK ("Profile updated successfully")
         deactivate BE
         activate FE
-        FE -> Pengguna: Tampilkan pesan sukses dan profil terbaru
+        FE -> Pengguna: Tampilkan pesan "Profile updated successfully"
         deactivate FE
 
     else Gagal memperbarui profil (DB error)
-        DB --> BE: Error response
+        DB --> BE: Error (e.g., constraint violation / data not found / connection failure)
         deactivate DB
         activate BE
         BE --> FE: 500 Internal Server Error ("Failed to update profile")
         deactivate BE
         activate FE
-        FE -> Pengguna: Tampilkan pesan error "Failed to update profile. Please try again."
+        FE -> Pengguna: Tampilkan pesan "Failed to update profile. Please try again."
         deactivate FE
     end
 

@@ -28,16 +28,18 @@ deactivate FE
 activate BE
 
 alt Validasi berhasil (profile lengkap & pet tersedia)
-    BE -> DB: Buat adoption application (status: "Application Submitted")
+    BE -> DB: Simpan adoption application (status: "Application Submitted")
     deactivate BE
     activate DB
 
     alt Application berhasil dibuat
-        DB --> BE: OK (Application created)
+        DB --> BE: Success (Application created)
         activate BE
         BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}
         activate NS
         NS -> FE_Adopter: Push notification "Congratulations! Your adoption has been completed"
+        NS --> BE: Event broadcasted
+
         deactivate NS
         BE --> FE: 201 Created (Application detail)
         deactivate BE
@@ -52,7 +54,7 @@ alt Validasi berhasil (profile lengkap & pet tersedia)
         BE --> FE: 500 Internal Server Error ("Failed to create application")
         deactivate BE
         activate FE
-        FE -> Adopter: Tampilkan pesan error "Failed to create adoption application"
+        FE -> Adopter: Tampilkan pesan "Failed to create adoption application"
         deactivate FE
     end
 

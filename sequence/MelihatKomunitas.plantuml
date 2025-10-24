@@ -27,18 +27,22 @@ activate FE
     deactivate FE
     activate BE_Community
     BE_Community -> DB: Mengambil semua data komunitas
+    deactivate BE_Community
     activate DB
-    DB --> BE_Community: Return list of communities / null
-    deactivate DB
-
     alt Gagal memuat data komunitas
+    DB --> BE_Community: Return list of communities
+        activate BE_Community
         BE_Community --> FE: 200 OK (Empty list)
         deactivate BE_Community
         activate FE
         FE -> Pengguna: Tampilkan pesan error "Failed to load communities"
         deactivate FE
     else Data komunitas berhasil dimuat
+    DB --> BE_Community: Return list of communities
+        deactivate DB
+        activate BE_Community
         BE_Community --> FE: 200 OK (List of communities)
+        deactivate BE_Community
         activate FE
         FE -> Pengguna: Tampilkan daftar komunitas di tab "All Communities"
 
@@ -83,7 +87,7 @@ deactivate FE
 activate BE_Community
 BE_Community -> DB: Mengambil semua data komunitas berdasarkan filter
 activate DB
-DB --> BE_Community: Return filtered communities / null
+DB --> BE_Community: Return filtered communities
 deactivate DB
 BE_Community --> FE: 200 OK (Filtered communities)
 deactivate BE_Community
@@ -99,11 +103,22 @@ FE -> BE_Community: GET /api/communities/{community_id}
 deactivate FE
 activate BE_Community
 BE_Community -> DB: Mengambil detail komunitas berdasarkan community_id
+deactivate BE_Community
 activate DB
-DB --> BE_Community: Return community detail / null
-deactivate DB
 
-alt Detail komunitas ditemukan
+
+
+alt Komunitas tidak ditemukan / telah dihapus
+    DB --> BE_Community: Error (e.g., data not found / connection failure)
+    activate BE_Community
+    BE_Community --> FE: 404 Not Found ("Community not found")
+    deactivate BE_Community
+    activate FE
+    FE -> Pengguna: Tampilkan pesan error "Community not found"
+    deactivate FE
+else Detail komunitas ditemukan
+DB --> BE_Community: Return community detail
+deactivate DB
     BE_Community --> FE: 200 OK (Community detail)
     deactivate BE_Community
     activate FE
@@ -111,21 +126,17 @@ alt Detail komunitas ditemukan
 
     ' === Subflow: Menampilkan Postingan dalam Komunitas ===
     FE -> BE_Community: GET /api/communities/{community_id}/posts
+
     activate BE_Community
     BE_Community -> DB: Mengambil semua postingan dalam komunitas
     activate DB
-    DB --> BE_Community: Return list of posts / null
+    DB --> BE_Community: Return list of posts
     deactivate DB
     BE_Community --> FE: 200 OK (List of posts)
+    deactivate BE_Community
     FE -> Pengguna: Tampilkan daftar postingan di halaman komunitas
     deactivate FE
 
-else Komunitas tidak ditemukan / telah dihapus
-    BE_Community --> FE: 404 Not Found ("Community not found")
-    deactivate BE_Community
-    activate FE
-    FE -> Pengguna: Tampilkan pesan error "Community not found"
-    deactivate FE
 end
     end
 

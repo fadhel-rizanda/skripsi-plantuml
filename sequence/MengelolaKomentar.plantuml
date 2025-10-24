@@ -43,22 +43,26 @@ FE -> BE: POST /api/comments (body: {post_id, content})
 deactivate FE
 activate BE
 BE -> DB: Menyimpan data komentar dengan post_id
+deactivate BE
 activate DB
 alt Gagal insert ke DB
     DB --> BE: Error (e.g., constraint violation / connection failure)
+    activate BE
     BE --> FE: 400 Bad Request / 500 Internal Server Error ("Failed to post comment")
     deactivate BE
     activate FE
-    FE -> Pengguna: Tampilkan pesan error "Failed to post comment"
+    FE -> Pengguna: Tampilkan pesan "Failed to post comment"
     deactivate FE
 else Berhasil insert ke DB
-    DB --> BE: OK (Comment saved)
+    DB --> BE: Success (Comment saved)
     deactivate DB
     activate BE
 
     BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}
     activate NS
     NS -> FE_Adopter: Push notification "New comment on your post"
+    NS --> BE: Event broadcasted
+
     deactivate NS
 
     BE --> FE: 201 Created ("Comment added")
@@ -76,22 +80,26 @@ FE -> BE: POST /api/comments (body: {post_id, parent_id, content})
 deactivate FE
 activate BE
 BE -> DB: Menyimpan data komentar dengan post_id dan parent_id
+deactivate BE
 activate DB
 alt Gagal insert ke DB
     DB --> BE: Error (e.g., constraint violation / connection failure)
+    activate BE
+
     BE --> FE: 400 Bad Request / 500 Internal Server Error ("Failed to post reply")
     deactivate BE
     activate FE
-    FE -> Pengguna: Tampilkan pesan error "Failed to post reply"
+    FE -> Pengguna: Tampilkan pesan "Failed to post reply"
     deactivate FE
 else Berhasil insert ke DB
-    DB --> BE: OK (Reply saved)
+    DB --> BE: Success (Reply saved)
     deactivate DB
     activate BE
 
     BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}
     activate NS
     NS -> FE_Adopter: Push notification "New reply on your comment"
+    NS --> BE: Event broadcasted
     deactivate NS
 
     BE --> FE: 201 Created ("Reply added")
@@ -109,16 +117,18 @@ FE -> BE: PUT /api/comments/{comment_id} (body: {content})
 deactivate FE
 activate BE
 BE -> DB: Memperbarui komentar
+deactivate BE
 activate DB
 alt Gagal update ke DB
     DB --> BE: Error (e.g., constraint violation / data not found / connection failure)
+    activate BE
     BE --> FE: 400 Bad Request / 500 Internal Server Error ("Failed to update comment")
     deactivate BE
     activate FE
-    FE -> Pengguna: Tampilkan pesan error "Failed to update comment"
+    FE -> Pengguna: Tampilkan pesan "Failed to update comment"
     deactivate FE
 else Berhasil update
-    DB --> BE: OK (Comment updated)
+    DB --> BE: Success (Comment updated)
     deactivate DB
     activate BE
     BE --> FE: 200 OK ("Comment updated")
@@ -136,16 +146,18 @@ FE -> BE: DELETE /api/comments/{comment_id}
 deactivate FE
 activate BE
 BE -> DB: Menghapus komentar
+deactivate BE
 activate DB
 alt Gagal delete dari DB
     DB --> BE: Error (e.g., constraint violation / data not found / connection failure)
+    activate BE
     BE --> FE: 500 Internal Server Error ("Failed to delete comment")
     deactivate BE
     activate FE
-    FE -> Pengguna: Tampilkan pesan error "Failed to delete comment"
+    FE -> Pengguna: Tampilkan pesan "Failed to delete comment"
     deactivate FE
 else Berhasil delete
-    DB --> BE: OK (Comment deleted)
+    DB --> BE: Success (Comment deleted)
     deactivate DB
     activate BE
     BE --> FE: 200 OK ("Comment deleted")

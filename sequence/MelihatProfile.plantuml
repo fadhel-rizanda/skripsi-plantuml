@@ -22,19 +22,22 @@ activate FE
 FE -> BE: GET /api/profile/{user_id}
 deactivate FE
 activate BE
-
 BE -> DB: Mencari data user berdasarkan id
+deactivate BE
 activate DB
-DB --> BE: Return profile data / null
-deactivate DB
-
 alt Profil ditemukan
+DB --> BE: Return profile data
+activate BE
     BE --> FE: 200 OK (Profile data)
+    deactivate BE
     activate FE
     FE -> Pengguna: Tampilkan halaman profil dengan informasi lengkap
     deactivate FE
 
 else Profil tidak ditemukan / user dihapus
+    DB --> BE: Error (e.g., data not found / connection failure)
+    deactivate DB
+    activate BE
     BE --> FE: 404 Not Found ("Profile not found")
     deactivate BE
     activate FE

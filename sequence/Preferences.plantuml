@@ -23,14 +23,14 @@ Pengguna -> FE: Membuka halaman Preferences
 activate FE
 
 ' --- Paralel Request ---
-par Ambil data preferences user (jika ada)
+par Ambil data preferences user
     FE -> BE_Pref: GET /api/preferences
     activate BE_Pref
     BE_Pref -> DB: Mengambil data preferences user
     activate DB
-    DB --> BE_Pref: Return user preferences / null
+    DB --> BE_Pref: Return user preferences
     deactivate DB
-    BE_Pref --> FE: 200 OK (User preferences / empty)
+    BE_Pref --> FE: 200 OK (Data preferences pengguna)
     deactivate BE_Pref
 
 else Ambil data tag preferensi (personality, experience, pet type)
@@ -46,14 +46,14 @@ else Ambil data tag preferensi (personality, experience, pet type)
         deactivate Redis
         BE_Filter -> DB: Mengambil semua data tag dari tabel referensi
         activate DB
-        DB --> BE_Filter: Return preference tags data
+        DB --> BE_Filter: Return list of tags
         deactivate DB
         BE_Filter -> Redis: SET cache:preference_tags (data, expired 1 jam)
         activate Redis
         Redis --> BE_Filter: OK
         deactivate Redis
     end
-        BE_Filter --> FE: 200 OK (Tags data)
+        BE_Filter --> FE: 200 OK (Data tags)
         deactivate BE_Filter
     FE -> FE: Simpan tags di FE state
     activate FE #LightBlue
@@ -64,48 +64,40 @@ activate FE
 FE -> Pengguna: Tampilkan form preferensi dengan opsi (personality, pengalaman, preferensi hewan)
 deactivate FE
 
-
-' === User Mengisi Form ===
-Pengguna -> FE: Mengisi personality, pengalaman, dan preferensi hewan
-activate FE
-FE -> BE_Pref: POST /api/preferences {data_preferensi}
-deactivate FE
-activate BE_Pref
-
-
-alt Data valid
-    BE_Pref -> DB: Simpan data preferences untuk user
-    activate DB
-    alt Berhasil disimpan
-        DB --> BE_Pref: OK (Preferences saved)
-        BE_Pref --> FE: 200 OK ("Preferences saved")
-        activate FE
-        FE -> Pengguna: Arahkan ke halaman Dashboard
-        deactivate FE
-    else Gagal menyimpan ke database
-        DB --> BE_Pref: Error (Insert failed / DB unreachable)
-        deactivate DB
-        BE_Pref --> FE: 500 Internal Server Error ("Failed to save preferences")
-        deactivate BE_Pref
-        activate FE
-        FE -> Pengguna: Tampilkan pesan error ("Failed to save preferences. Please try again.")"
-        deactivate FE
-    end
-else Data tidak valid
-    BE_Pref --> FE: 400 Bad Request ("Invalid data")
-    deactivate BE_Pref
-    activate FE
-    FE -> Pengguna: Tampilkan pesan error "Invalid data. Please check your input."
-    deactivate FE
-end
-
-
-
 ' === Alternate: Skip for later ===
 alt Pengguna memilih "Skip for later"
     Pengguna -> FE: Klik "Skip for later"
     activate FE
     FE -> Pengguna: Arahkan ke halaman Dashboard tanpa menyimpan preferensi
     deactivate FE
+    else Pengguna mengisi form preferensi
+' === User Mengisi Form ===
+Pengguna -> FE: Mengisi personality, pengalaman, dan preferensi hewan
+activate FE
+FE -> BE_Pref: POST /api/preferences {data_preferensi}
+deactivate FE
+activate BE_Pref
+    BE_Pref -> DB: Simpan data preferences untuk user
+    deactivate BE_Pref
+    activate DB
+    alt Berhasil disimpan
+        DB --> BE_Pref: Success (Preferences saved)
+        activate BE_Pref
+        BE_Pref --> FE: 200 OK ("Preferences saved")
+        deactivate BE_Pref
+        activate FE
+        FE -> Pengguna: Arahkan ke halaman Dashboard
+        deactivate FE
+    else Gagal menyimpan ke database
+        DB --> BE_Pref: Error (e.g., constraint violation / connection failure)
+        deactivate DB
+        activate BE_Pref
+
+        BE_Pref --> FE: 500 Internal Server Error ("Failed to save preferences")
+        deactivate BE_Pref
+        activate FE
+        FE -> Pengguna: Tampilkan pesan "Failed to save preferences. Please try again."
+        deactivate FE
+    end
 end
 @enduml

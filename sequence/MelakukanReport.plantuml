@@ -17,11 +17,6 @@ participant "ReportController (Laravel BE)" as BE
 database "Database (PostgreSQL)" as DB
 
 ' === Flow: Melakukan Report Pelanggaran Konten ===
-Pengguna -> FE: Klik ikon menu (⋮) pada konten
-activate FE
-FE -> Pengguna: Tampilkan menu opsi (Report Content, Share, dll.)
-deactivate FE
-
 Pengguna -> FE: Pilih "Report Content"
 activate FE
 FE -> Pengguna: Tampilkan form laporan (alasan, deskripsi)
@@ -39,7 +34,7 @@ activate BE
     activate DB
 
     alt Laporan berhasil disimpan
-        DB --> BE: OK (Report saved)
+        DB --> BE: Success (Report saved)
         activate BE
         BE --> FE: 200 OK ("Report submitted successfully")
         deactivate BE

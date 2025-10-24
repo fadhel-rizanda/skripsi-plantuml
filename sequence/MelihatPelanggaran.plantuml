@@ -45,7 +45,7 @@ FE -> Admin: Tampilkan halaman detail laporan
 deactivate FE
 
 ' === Menindaklanjuti Laporan ===
-    Admin -> FE: Klik tombol action (Approve/Reject/Remove Content)
+    Admin -> FE: Klik tombol action (Terminate/Reject/Takedown Content)
     activate FE
     FE -> Admin: Tampilkan pop-up konfirmasi tindakan
     deactivate FE
@@ -53,19 +53,20 @@ deactivate FE
     alt Admin konfirmasi "Continue"
         Admin -> FE: Klik "Continue"
         activate FE
-        FE -> FE: Validasi model tindakan (cek input & status laporan)
         FE -> BE: POST /api/reports/{id}/action (body: {action_type})
         deactivate FE
         activate BE
         BE -> DB: Perbarui status laporan sesuai model tindakan
+        deactivate BE
         activate DB
 
         alt Pembaruan berhasil
-            DB --> BE: OK (Status updated)
+            DB --> BE: Success (Status updated)
+            activate BE
             BE --> FE: 200 OK (Tindakan berhasil)
             deactivate BE
             activate FE
-            FE -> Admin: Tampilkan notifikasi sukses dan perbarui tampilan
+            FE -> Admin: Tampilkan pesan "Report processed successfully"
             deactivate FE
 
         else Pembaruan gagal
@@ -75,7 +76,7 @@ deactivate FE
             BE --> FE: 500 Internal Server Error ("Failed to process report")
             deactivate BE
             activate FE
-            FE -> Admin: Tampilkan notifikasi gagal
+            FE -> Admin: Tampilkan pesan ("Failed to process report")
             deactivate FE
         end
 

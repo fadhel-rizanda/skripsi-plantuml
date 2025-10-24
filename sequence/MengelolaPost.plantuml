@@ -21,6 +21,7 @@ database "Database" as DB
 
 
 '== A. Membuka Form Tambah Post ==
+group Membuat Post Baru
 Provider -> FE: Klik "Create Post"
 activate FE
 FE -> BE: GET /api/tags
@@ -63,7 +64,7 @@ activate FE
     alt Gagal generate URL
         FileBE --> FE: 500 Internal Server Error ("Failed to generate URL")
         activate FE
-        FE -> Provider: Tampilkan pesan gagal upload
+        FE -> Provider: Tampilkan pesan "Failed to generate upload URL"
         deactivate FE
     else URL berhasil digenerate
         FileBE --> FE: 200 OK (Pre-signed URL)
@@ -77,7 +78,7 @@ activate FE
         alt Gagal upload
             Storage --> FE: 500 Internal Server Error ("Upload failed")
             activate FE
-            FE -> Provider: Tampilkan pesan gagal upload
+            FE -> Provider: Tampilkan pesan "Failed to upload image"
             deactivate FE
         else Upload berhasil
             Storage --> FE: 201 Created (File uploaded)
@@ -96,7 +97,7 @@ activate FE
                 BE --> FE: 500 Error ("Failed to save post")
                 deactivate BE
                 activate FE
-                FE -> Provider: Tampilkan pesan gagal simpan
+                FE -> Provider: Tampilkan pesan "Failed to save post"
                 deactivate FE
             else Berhasil
                 DB --> BE: Success (Post saved)
@@ -106,9 +107,10 @@ activate FE
                 BE --> FE: 201 Created ("Post saved")
                 deactivate BE
                 activate FE
-                FE -> Provider: Notifikasi "Post added successfully"
+                FE -> Provider: Tampilkan pesan "Post added successfully"
                 deactivate FE
             end
+        end
         end
     end
 else Tidak ada gambar baru
@@ -127,7 +129,7 @@ else Tidak ada gambar baru
         BE --> FE: 500 Error ("Failed to save post")
         deactivate BE
         activate FE
-        FE -> Provider: Pesan gagal simpan
+        FE -> Provider: Tampilkan pesan "Failed to save post"
         deactivate FE
     else Berhasil
         DB --> BE: Success (Post saved)
@@ -136,7 +138,7 @@ else Tidak ada gambar baru
         BE --> FE: 201 Created ("Post saved")
         deactivate BE
         activate FE
-        FE -> Provider: Notifikasi "Post added successfully"
+        FE -> Provider: Tampilkan pesan "Post added successfully"
         deactivate FE
     end
 end
@@ -159,6 +161,7 @@ deactivate FE
 
 
 '== D. Edit dan Simpan Perubahan ==
+group Mengedit Post
 Provider -> FE: Klik "Edit Information"
 activate FE
 'Provider -> FE: Klik "Edit Information"
@@ -216,7 +219,7 @@ alt Gagal update
     BE --> FE: 500 Internal Server Error ("Failed to update post")
     deactivate BE
     activate FE
-FE -> Provider: Pesan gagal update
+FE -> Provider: Tampilkan pesan "Failed to update post"
     deactivate FE
 else Berhasil update
     DB --> BE: Success (Post updated)
@@ -225,8 +228,9 @@ else Berhasil update
     BE --> FE: 200 OK (Post updated)
     deactivate BE
     activate FE
-    FE -> Provider: Notifikasi "Post updated successfully"
+    FE -> Provider: Tampilkan pesan "Post updated successfully"
     deactivate FE
+end
 end
 deactivate FE
 

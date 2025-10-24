@@ -24,9 +24,9 @@ deactivate FE
 activate BE
 BE -> DB: Ambil semua proses adopsi milik penyedia
 activate DB
-DB --> BE: Daftar proses adopsi ditemukan
+DB --> BE: Return list of adoption processes
 deactivate DB
-BE --> FE: Kirim daftar proses adopsi
+BE --> FE: 200 Ok (Daftar proses adopsi)
 deactivate BE
 activate FE
 FE -> Provider: Tampilkan daftar proses adopsi
@@ -39,9 +39,9 @@ deactivate FE
 activate BE
 BE -> DB: Ambil detail proses adopsi berdasarkan ID
 activate DB
-DB --> BE: Data detail proses adopsi
+DB --> BE: Return adoption detail
 deactivate DB
-BE --> FE: Kirim detail proses adopsi
+BE --> FE: 200 Ok (Detail proses adopsi)
 deactivate BE
 activate FE
 FE -> Provider: Tampilkan tahapan proses adopsi
@@ -53,20 +53,21 @@ FE -> BE: Kirim permintaan finalisasi proses adopsi
 deactivate FE
 activate BE
 BE -> DB: Perbarui status proses adopsi menjadi "Ready for Admin Finalization"
+deactivate BE
 activate DB
-
 alt Gagal memperbarui status
-    DB --> BE: Gagal memperbarui data
-    BE --> FE: Respon gagal ("Failed to update adoption status")
+    DB --> BE: Error (e.g., constraint violation / data not found / connection failure)
+    activate BE
+    BE --> FE: 500 Internal Server Error("Failed to update adoption status")
     deactivate BE
     activate FE
-    FE -> Provider: Tampilkan pesan error
+    FE -> Provider: Tampilkan pesan "Failed to update adoption status"
     deactivate FE
 else Berhasil memperbarui status
-    DB --> BE: Status berhasil diperbarui
+    DB --> BE: Ok (Status updated)
     deactivate DB
     activate BE
-    BE --> FE: Respon sukses ("Adoption approved")
+    BE --> FE: 200 Ok ("Adoption approved")
     deactivate BE
     activate FE
     FE -> Provider: Tampilkan status baru "Ready for Admin Finalization"

@@ -11,11 +11,12 @@ skinparam sequence {
 hide footbox
 
 actor "Calon Pengadopsi" as Adopter
-actor "Penyedia Hewan" as Provider
 participant "Application Reviewed Page (Next.js FE)" as FE
 participant "FileUploadController (Laravel BE)" as BE
 participant "Cloud Storage (S3)" as Storage
 database "Database(PostgreSQL)" as DB
+participant "NotificationService (Laravel BE)" as Reverb
+actor "Penyedia Hewan" as Provider
 
 '== Membuka Halaman Application Reviewed ==
 Adopter -> FE: Buka tab "Application Reviewed"
@@ -24,7 +25,7 @@ FE -> BE: GET /api/adoptions/{id}/requirements
 activate BE
 BE -> DB: Ambil data requirement dan status
 activate DB
-DB --> BE: Success (Data requirement)
+DB --> BE: Return list of requirements
 deactivate DB
 BE --> FE: 200 OK (Data requirement)
 deactivate BE
@@ -47,48 +48,52 @@ else URL berhasil digenerate
     BE --> FE: 200 OK (Pre-signed URL)
     deactivate BE
     activate FE
-end
-FE -> Storage: POST file ke pre-signed URL
-deactivate FE
-activate Storage
-
-alt Gagal upload file
-    Storage --> FE: 500 Internal Server Error ("Upload failed")
-    activate FE
-    FE -> Adopter: Tampilkan pesan "Upload failed. Please try again."
+    FE -> Storage: POST file ke pre-signed URL
     deactivate FE
-else Upload berhasil
-    Storage --> FE: 201 Created (File uploaded)
-    deactivate Storage
-    activate FE
-end
+    activate Storage
 
-FE -> BE: POST /api/adoptions/{id}/requirements/{reqId}/upload (Requirement + Metadata data)
-deactivate FE
-activate BE
-BE -> DB: Simpan data upload dan update status "Reviewed"
-deactivate BE
-activate DB
-alt Gagal simpan metadata
-    DB --> BE: Error response (e.g., constraint violation / connection failure)
+    alt Gagal upload file
+        Storage --> FE: 500 Internal Server Error ("Upload failed")
+        activate FE
+        FE -> Adopter: Tampilkan pesan "Upload failed. Please try again."
+        deactivate FE
+    else Upload berhasil
+        Storage --> FE: 201 Created (File uploaded)
+        deactivate Storage
+        activate FE
+
+    FE -> BE: POST /api/adoptions/{id}/requirements/{reqId}/upload (Requirement + Metadata data)
+    deactivate FE
     activate BE
-    BE --> FE: 500 Internal Server Error ("Failed to save requirement")
+    BE -> DB: Simpan data upload dan update status "Reviewed"
     deactivate BE
-    activate FE
-    FE -> Adopter: Tampilkan pesan "Upload completed but failed to save. Contact support."
-    deactivate FE
-else Penyimpanan metadata berhasil
-    DB --> BE: Success (Metadata saved)
-    deactivate DB
-    activate BE
-    BE -> Provider: Kirim notifikasi "Requirement uploaded"
-    BE --> FE: 201 Created (Metadata saved)
-    deactivate BE
-
-    activate FE
-    FE -> Adopter: Tampilkan notifikasi "Upload successful"
-    deactivate FE
+    activate DB
+    alt Gagal simpan metadata
+        DB --> BE: Error response (e.g., constraint violation / connection failure)
+        activate BE
+        BE --> FE: 500 Internal Server Error ("Failed to save requirement")
+        deactivate BE
+        activate FE
+        FE -> Adopter: Tampilkan pesan "Upload completed but failed to save. Contact support."
+        deactivate FE
+    else Penyimpanan metadata berhasil
+        DB --> BE: Success (Requirement saved)
+        deactivate DB
+        activate BE
+        BE -> Reverb: Broadcast event "MessageSent" ke channel "chat.{user_id}"
+        activate Reverb
+        Reverb -> Provider: Push message "New requirement uploaded"
+        Reverb --> BE: Event broadcasted
+        deactivate Reverb
+        BE --> FE: 201 Created (Metadata saved)
+        deactivate BE
+        activate FE
+        FE -> Adopter: Tampilkan pesan "Upload successful"
+        deactivate FE
+    end
+    end
 end
+
 
 '== Notifikasi ke Penyedia Hewan ==
 'note right of BE
@@ -104,69 +109,58 @@ FE -> BE: GET /api/adoptions/{id}/requirements/review
 activate BE
 BE -> DB: Ambil data terkait requirement
 activate DB
-DB --> BE: Data requirement lengkap
+DB --> BE: Return list of requirements
 deactivate DB
 BE --> FE: 200 OK (Data requirement)
 deactivate BE
 FE -> Provider: Tampilkan daftar requirement
 deactivate FE
-
 '== Menentukan Status Requirement ==
 Provider -> FE: Pilih "Accept" atau "Decline"
 activate FE
-FE -> BE: PUT /api/adoptions/{id}/requirements/{reqId}/accept
+FE -> BE: PUT /api/adoptions/{id}/requirements/{reqId}/accept|decline
 deactivate FE
 activate BE
 BE -> DB: Update status di database
-deactivate BE
 activate DB
 
 alt Gagal update status requirement
-    DB --> BE: Error response (e.g., constraint violation / connection failure)
-    activate BE
+    DB --> BE: Error (constraint violation / connection failure)
     BE --> FE: 500 Internal Server Error ("Failed to update status")
     deactivate BE
     activate FE
     FE -> Provider: Tampilkan pesan "Failed to update status. Try again."
     deactivate FE
+
 else Update berhasil
     DB --> BE: Success (Status updated)
     deactivate DB
-    activate BE
-    BE -> Adopter: Kirim notifikasi hasil review (Accepted/Declined)
-    BE --> FE: 200 OK (Status updated)
-    deactivate BE
-    activate FE
-    FE -> Provider: Tampilkan notifikasi sukses
-    deactivate FE
-end
 
-'== Penyedia menolak dokumen ==
-alt Penyedia memilih Decline
-    Provider -> FE: Pilih "Decline"
-    activate FE
-    FE -> BE: PUT /api/adoptions/{id}/requirements/{reqId}/decline
-    deactivate FE
-    activate BE
-    BE -> DB: Update status requirement "Declined"
-    activate DB
-
-    alt Gagal update status requirement
-        DB --> BE: Error response (e.g., constraint violation / connection failure)
-        BE --> FE: 500 Internal Server Error ("Failed to update status")
-        deactivate BE
-        FE -> Provider: Tampilkan pesan "Failed to decline requirement. Try again."
-        deactivate FE
-    else Update berhasil
-        DB --> BE: Success (Status updated)
-        deactivate DB
+    alt Status = Accepted
         activate BE
-        BE -> Adopter: Kirim notifikasi "Document declined"
+        BE -> Reverb: Broadcast event "MessageSent" ke channel "chat.{user_id}"
+        activate Reverb
+        Reverb -> Adopter: Push message "Your document has been accepted"
+        Reverb --> BE: Event broadcasted
+        deactivate Reverb
+        BE --> FE: 200 OK ("Requirement accepted successfully")
         deactivate BE
-'        note right of Adopter
-'            Pengadopsi dapat mengunggah ulang
-'            dokumen yang sudah diperbaiki.
-'        end note
+        activate FE
+        FE -> Provider: Tampilkan pesan "Requirement accepted successfully"
+        deactivate FE
+
+    else Status = Declined
+        BE -> Reverb: Broadcast event "MessageSent" ke channel "chat.{user_id}"
+        activate BE
+        activate Reverb
+        Reverb -> Adopter: Push message "Your document has been declined"
+        Reverb --> BE: Event broadcasted
+        deactivate Reverb
+        BE --> FE: 200 OK ("Requirement declined successfully")
+        deactivate BE
+        activate FE
+        FE -> Provider: Tampilkan pesan "Requirement declined successfully"
+        deactivate FE
     end
 end
 

@@ -63,7 +63,7 @@ activate FE
     alt Gagal generate URL
         FileBE --> FE: 500 Internal Server Error ("Failed to generate URL")
         activate FE
-        FE -> Provider: Tampilkan pesan gagal upload
+        FE -> Provider: Tampilkan pesan "Failed to generate upload URL"
         deactivate FE
     else URL berhasil digenerate
         FileBE --> FE: 200 OK (Pre-signed URL)
@@ -77,7 +77,7 @@ activate FE
         alt Gagal upload
             Storage --> FE: 500 Internal Server Error ("Upload failed")
             activate FE
-            FE -> Provider: Tampilkan pesan gagal upload
+            FE -> Provider: Tampilkan pesan "Failed to upload file"
             deactivate FE
         else Upload berhasil
             Storage --> FE: 201 Created (File uploaded)
@@ -96,7 +96,7 @@ activate FE
                 BE --> FE: 500 Error ("Failed to save pet")
                 deactivate BE
                 activate FE
-                FE -> Provider: Tampilkan pesan gagal simpan
+                FE -> Provider: Tampilkan pesan "Failed to save pet"
                 deactivate FE
             else Berhasil
                 DB --> BE: Success (Pet saved)
@@ -106,7 +106,7 @@ activate FE
                 BE --> FE: 201 Created ("Pet saved")
                 deactivate BE
                 activate FE
-                FE -> Provider: Notifikasi "Pet added successfully"
+                FE -> Provider: Tampilkan pesan "Pet added successfully"
                 deactivate FE
             end
         end
@@ -127,7 +127,7 @@ else Tidak ada file baru
         BE --> FE: 500 Error ("Failed to save pet")
         deactivate BE
         activate FE
-        FE -> Provider: Pesan gagal simpan
+        FE -> Provider: Tampilkan pesan "Failed to save pet"
         deactivate FE
     else Berhasil
         DB --> BE: Success (Pet saved)
@@ -136,7 +136,7 @@ else Tidak ada file baru
         BE --> FE: 201 Created ("Pet saved")
         deactivate BE
         activate FE
-        FE -> Provider: Notifikasi "Pet added successfully"
+        FE -> Provider: Tampilkan pesan "Pet added successfully"
         deactivate FE
     end
 end
@@ -209,7 +209,7 @@ alt Ada file baru
     alt Gagal generate URL
         FileBE --> FE: 500 Internal Server Error ("Failed to generate URL")
         activate FE
-        FE -> Provider: Tampilkan pesan gagal upload
+        FE -> Provider: Tampilkan pesan "Failed to generate upload URL"
         deactivate FE
     else URL berhasil
         FileBE --> FE: 200 OK (Pre-signed URL)
@@ -222,7 +222,7 @@ alt Ada file baru
         alt Upload gagal
             Storage --> FE: 500 Internal Server Error ("Upload failed")
             activate FE
-            FE -> Provider: Pesan gagal upload
+            FE -> Provider: Tampilkan pesan "Failed to upload file"
             deactivate FE
         else Upload berhasil
             Storage --> FE: Success
@@ -241,7 +241,7 @@ alt Ada file baru
                 BE --> FE: 500 Internal Server Error ("Failed to update pet")
                 deactivate BE
                 activate FE
-                FE -> Provider: Pesan gagal update
+                FE -> Provider: Tampilkan pesan "Failed to update pet"
                 deactivate FE
             else Berhasil update
                 DB --> BE: Success (Pet updated)
@@ -250,7 +250,7 @@ alt Ada file baru
                 BE --> FE: 200 OK (Pet updated)
                 deactivate BE
                 activate FE
-                FE -> Provider: Notifikasi "Pet updated successfully"
+                FE -> Provider: Tampilkan pesan "Pet updated successfully"
                 deactivate FE
             end
         end
@@ -271,7 +271,7 @@ else Tidak ada file baru
         BE --> FE: 500 Internal Server Error ("Failed to update pet")
         deactivate BE
         activate FE
-        FE -> Provider: Pesan gagal update
+        FE -> Provider: Tampilkan pesan "Failed to update pet"
         deactivate FE
     else Berhasil update
         DB --> BE: Success (Pet updated)
@@ -280,7 +280,7 @@ else Tidak ada file baru
         BE --> FE: 200 OK (Pet updated)
         deactivate BE
         activate FE
-        FE -> Provider: Notifikasi "Pet updated successfully"
+        FE -> Provider: Tampilkan pesan "Pet updated successfully"
         deactivate FE
     end
 end

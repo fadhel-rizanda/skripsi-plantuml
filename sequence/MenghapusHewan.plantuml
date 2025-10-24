@@ -42,33 +42,38 @@ group Admin Menghapus Hewan
         Admin -> FE: Klik "Continue"
         activate FE
         FE -> BE: DELETE /api/pets/{id}
+        deactivate FE
         activate BE
         BE -> DB: Hapus data hewan berdasarkan ID
+        deactivate BE
         activate DB
 
         alt Penghapusan berhasil
-            DB --> BE: OK (Row deleted)
+            DB --> BE: Success (Row deleted)
+            activate BE
             ' Kirim notifikasi ke Penyedia Hewan
             BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}
             activate NS
             NS -> Provider: Push notification "Your pet has been taken down by admin"
+            NS --> BE: Event broadcasted
             deactivate NS
             BE --> FE: 200 OK ("Pet deleted successfully")
             deactivate BE
+            activate FE
             FE -> FE: Perbarui daftar hewan di UI
             activate FE #LightBlue
             deactivate FE #LightBlue
-            FE -> Admin: Tampilkan toast "Pet deleted successfully"
+            FE -> Admin: Tampilkan pesan "Pet deleted successfully"
             deactivate FE
 
         else Gagal menghapus data
-            DB --> BE: Error (Deletion failed)
+            DB --> BE: Error (e.g., data not found / connection failure)
             deactivate DB
             activate BE
             BE --> FE: 500 Internal Server Error ("Failed to delete pet")
             deactivate BE
             activate FE
-            FE -> Admin: Tampilkan toast "Failed to delete pet. Please try again."
+            FE -> Admin: Tampilkan pesan "Failed to delete pet. Please try again."
             deactivate FE
         end
 
@@ -106,28 +111,32 @@ group Penyedia Hewan Menghapus Hewan
         Provider -> FE: Klik "Continue"
         activate FE
         FE -> BE: DELETE /api/pets/{id}
+        deactivate FE
         activate BE
         BE -> DB: Hapus data hewan berdasarkan ID
+        deactivate BE
         activate DB
 
         alt Penghapusan berhasil
-            DB --> BE: OK (Row deleted)
+            DB --> BE: Success (Row deleted)
+            activate BE
             BE --> FE: 200 OK ("Pet deleted successfully")
             deactivate BE
+            activate FE
             FE -> FE: Redirect ke halaman daftar hewan
             activate FE #LightBlue
             deactivate FE #LightBlue
-            FE -> Provider: Tampilkan toast "Pet deleted successfully"
+            FE -> Provider: Tampilkan pesan "Pet deleted successfully"
             deactivate FE
 
         else Gagal menghapus data
-            DB --> BE: Error (Deletion failed)
-            activate BE
+            DB --> BE: Error (e.g., data not found / connection failure)
             deactivate DB
+            activate BE
             BE --> FE: 500 Internal Server Error ("Failed to delete pet")
             deactivate BE
             activate FE
-            FE -> Provider: Tampilkan toast "Failed to delete pet. Please try again."
+            FE -> Provider: Tampilkan pesan "Failed to delete pet. Please try again."
             deactivate FE
         end
 

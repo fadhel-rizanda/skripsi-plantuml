@@ -43,35 +43,40 @@ group Admin Menghapus Komunitas
         Admin -> FE: Klik "Continue"
         activate FE
         FE -> BE: DELETE /api/communities/{id}
+        deactivate FE
         activate BE
         BE -> DB: Hapus data komunitas berdasarkan ID
+        deactivate BE
         activate DB
 
         alt Penghapusan berhasil
-            DB --> BE: OK (Row deleted)
+            DB --> BE: Success (Row deleted)
+            activate BE
              ' Kirim notifikasi ke Creator komunitas
             BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}
             activate NS
             NS -> FE_Creator: Push notification "Your community has been taken down by admin"
+            NS --> BE: Event broadcasted
             deactivate NS
             BE --> FE: 200 OK ("Community deleted successfully")
             deactivate BE
+            activate FE
             FE -> FE: Perbarui daftar komunitas di UI
             activate FE #LightBlue
             deactivate FE #LightBlue
-            FE -> Admin: Tampilkan toast "Community deleted successfully"
+            FE -> Admin: Tampilkan pesan "Community deleted successfully"
             deactivate FE
 
 
 
         else Gagal menghapus data
-            DB --> BE: Error (Deletion failed)
+            DB --> BE: Error (e.g., data not found / connection failure)
             deactivate DB
             activate BE
             BE --> FE: 500 Internal Server Error ("Failed to delete community")
             deactivate BE
             activate FE
-            FE -> Admin: Tampilkan toast "Failed to delete community. Please try again."
+            FE -> Admin: Tampilkan pesan "Failed to delete community. Please try again."
             deactivate FE
         end
 
@@ -91,6 +96,7 @@ group Pengguna Menghapus Komunitas
     Pengguna -> FE: Buka halaman detail komunitas
     activate FE
     FE -> BE: GET /api/communities/{id}
+    
     activate BE
     BE -> DB: Ambil detail komunitas berdasarkan ID
     activate DB
@@ -113,28 +119,32 @@ group Pengguna Menghapus Komunitas
         Pengguna -> FE: Klik "Continue"
         activate FE
         FE -> BE: DELETE /api/communities/{id}
+        deactivate FE
         activate BE
         BE -> DB: Hapus data komunitas berdasarkan ID
+        deactivate BE
         activate DB
 
         alt Penghapusan berhasil
-            DB --> BE: OK (Row deleted)
+            DB --> BE: Success (Row deleted)
+            activate BE
             BE --> FE: 200 OK ("Community deleted successfully")
             deactivate BE
+            activate FE
             FE -> FE: Redirect ke halaman daftar komunitas
             activate FE #LightBlue
             deactivate FE #LightBlue
-            FE -> Pengguna: Tampilkan toast "Community deleted successfully"
+            FE -> Pengguna: Tampilkan pesan "Community deleted successfully"
             deactivate FE
 
         else Gagal menghapus data
-            DB --> BE: Error (Deletion failed)
+            DB --> BE: Error (e.g., data not found / connection failure)
             deactivate DB
             activate BE
             BE --> FE: 500 Internal Server Error ("Failed to delete community")
             deactivate BE
             activate FE
-            FE -> Pengguna: Tampilkan toast "Failed to delete community. Please try again."
+            FE -> Pengguna: Tampilkan pesan "Failed to delete community. Please try again."
             deactivate FE
         end
 

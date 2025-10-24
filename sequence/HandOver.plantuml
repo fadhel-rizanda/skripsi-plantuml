@@ -99,10 +99,12 @@ FE -> BE: POST /api/adoptions/{id}/handover-proof {proof data}
 deactivate FE
 activate BE
 BE -> DB: Simpan data proof dan update status "Proof Uploaded"
+deactivate BE
 activate DB
 
 alt Gagal simpan data proof
     DB --> BE: Error response (e.g., constraint violation / connection failure)
+    activate BE
     BE --> FE: 500 Internal Server Error ("Failed to save record")
     deactivate BE
     activate FE

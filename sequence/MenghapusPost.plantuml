@@ -42,34 +42,39 @@ group Admin Menghapus Post
         Admin -> FE: Klik "Continue"
         activate FE
         FE -> BE: DELETE /api/posts/{id}
+        deactivate FE
         activate BE
         BE -> DB: Hapus data post berdasarkan ID
+        deactivate BE
         activate DB
 
         alt Penghapusan berhasil
-            DB --> BE: OK (Row deleted)
+            DB --> BE: Success (Row deleted)
+            activate BE
             ' Kirim notifikasi ke Creator post
             BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}
             activate NS
             NS -> Pengguna: Push notification "Your post has been taken down by admin"
+            NS --> BE: Event broadcasted
             deactivate NS
             BE --> FE: 200 OK ("Post deleted successfully")
             deactivate BE
+            activate FE
             FE -> FE: Perbarui daftar post di UI
             activate FE #LightBlue
             deactivate FE #LightBlue
-            FE -> Admin: Tampilkan toast "Post deleted successfully"
+            FE -> Admin: Tampilkan pesan "Post deleted successfully"
             deactivate FE
 
 
         else Gagal menghapus data
-            DB --> BE: Error (Deletion failed)
+            DB --> BE: Error (e.g., data not found / connection failure)
             deactivate DB
             activate BE
             BE --> FE: 500 Internal Server Error ("Failed to delete post")
             deactivate BE
             activate FE
-            FE -> Admin: Tampilkan toast "Failed to delete post. Please try again."
+            FE -> Admin: Tampilkan pesan "Failed to delete post. Please try again."
             deactivate FE
         end
 
@@ -109,28 +114,32 @@ group Pengguna Menghapus Post
         Pengguna -> FE: Klik "Continue"
         activate FE
         FE -> BE: DELETE /api/posts/{id}
+        deactivate FE
         activate BE
         BE -> DB: Hapus data post berdasarkan ID
+        deactivate BE
         activate DB
 
         alt Penghapusan berhasil
-            DB --> BE: OK (Row deleted)
+            DB --> BE: Success (Row deleted)
+            activate BE
             BE --> FE: 200 OK ("Post deleted successfully")
             deactivate BE
+            activate FE
             FE -> FE: Redirect ke halaman daftar post
             activate FE #LightBlue
             deactivate FE #LightBlue
-            FE -> Pengguna: Tampilkan toast "Post deleted successfully"
+            FE -> Pengguna: Tampilkan pesan "Post deleted successfully"
             deactivate FE
 
         else Gagal menghapus data
-            DB --> BE: Error (Deletion failed)
+            DB --> BE: Error (e.g., data not found / connection failure)
             deactivate DB
             activate BE
             BE --> FE: 500 Internal Server Error ("Failed to delete post")
             deactivate BE
             activate FE
-            FE -> Pengguna: Tampilkan toast "Failed to delete post. Please try again."
+            FE -> Pengguna: Tampilkan pesan "Failed to delete post. Please try again."
             deactivate FE
         end
 

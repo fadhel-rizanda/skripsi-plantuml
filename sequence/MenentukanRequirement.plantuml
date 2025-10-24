@@ -62,20 +62,18 @@ FE -> BE: POST /api/requirements {requirements[]}
 deactivate FE
 activate BE
 
-    BE --> FE: 400 Bad Request ("Validation error")
-    activate FE
-    FE -> Provider: Tampilkan pesan error "Requirement name cannot be empty"
-    deactivate FE
 
     BE -> DB: Simpan semua requirement ke tabel requirements
     activate DB
 
     alt Berhasil menyimpan requirement
+        DB --> BE: Success (Requirements saved)
+
         BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}
         activate NS
         NS -> FE_Adopter: Push notification "Requirements set by provider"
+            NS --> BE: Event broadcasted
         deactivate NS
-        DB --> BE: OK (Requirements saved)
         BE --> FE: 201 Created (Daftar requirement terbaru)
         deactivate BE
         activate FE
@@ -89,7 +87,7 @@ activate BE
         BE --> FE: 500 Internal Server Error ("Failed to set requirements")
         deactivate BE
         activate FE
-        FE -> Provider: Tampilkan pesan error "Failed to set requirements. Please try again."
+        FE -> Provider: Tampilkan pesan "Failed to set requirements. Please try again."
         deactivate FE
 end
 
