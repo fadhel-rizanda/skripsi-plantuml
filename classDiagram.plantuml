@@ -1,0 +1,798 @@
+@startuml Pawsitive_Complete_Architecture
+skinparam monochrome true
+skinparam class {
+  BackgroundColor White
+  ArrowColor Black
+  BorderColor Black
+  FontColor Black
+  FontSize 10
+}
+skinparam legend padding 10
+hide circle
+skinparam classAttributeIconSize 0
+
+
+legend left
+== Layer Deskripsi ==
+- **Frontend (Page Layer)**: antarmuka pengguna (Next.js), menampilkan data & mengirim request ke API.
+- **Request Layer**: validasi dan otorisasi input.
+- **Controller Layer**: menerima request dan meneruskan ke service.
+- **Service Layer**: logika bisnis utama.
+- **Repository Layer**: interaksi langsung dengan model/ORM.
+- **Model Layer**: representasi tabel dan relasi database.
+endlegend
+
+' ==========================================
+' 🖥️ FRONTEND LAYER (PAGE/UI)
+' ==========================================
+class RegisterPage {
+  +submitRegistrationForm(): void
+}
+
+class LoginPage {
+  +submitLoginForm(): void
+}
+
+class ChangePasswordPage {
+  +submitChangePasswordForm(): void
+}
+
+class ProfilePage {
+  +viewProfile(): void
+  +editProfile(): void
+}
+
+class UserManagementPage {
+  +viewUsers(): void
+  +changeUserRole(): void
+}
+
+class PetListingPage {
+  +displayAvailablePets(): void
+}
+
+class PetDetailPage {
+  +viewPetDetails(): void
+  +adoptPet(): void
+}
+
+class PetManagementPage {
+  +createPet(): void
+  +updatePet(): void
+}
+
+class AdoptionPage {
+  +viewAdoptions(): void
+  +approveAdoption(): void
+}
+
+class CommunityPage {
+  +viewCommunities(): void
+  +createCommunity(): void
+  +joinCommunity(): void
+}
+
+class PostPage {
+  +viewPosts(): void
+  +createPost(): void
+  +likePost(): void
+}
+
+class ChatPage {
+  +sendMessage(): void
+  +viewChats(): void
+}
+
+class NotificationPage {
+  +viewNotifications(): void
+}
+
+class ReportPage {
+  +submitReport(): void
+  +viewReports(): void
+}
+
+class TagPage {
+  +viewTags(): void
+  +createTag(): void
+}
+
+class AttachmentPage {
+  +uploadFile(): void
+}
+
+' ==========================================
+' 1️⃣ REQUEST LAYER (VALIDASI)
+' ==========================================
+class RegisterRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class LoginRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class ChangePasswordRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class UserRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class AdoptionRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class RequirementRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class MeetAndGreetRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class ApproveScheduleRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class HandoverRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class AttachmentRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class PetRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class CommunityRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class PostRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class CommentRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class ChatRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class MessageRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class TagRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class ReportRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+class ReportActionRequest {
+  +rules(): array
+  +authorize(): bool
+}
+
+' ==========================================
+' 2️⃣ CONTROLLER LAYER
+' ==========================================
+class AuthController {
+  +register(request: RegisterRequest): JsonResponse
+  +login(request: LoginRequest): JsonResponse
+  +logout(): JsonResponse
+  +refreshToken(): JsonResponse
+  +changePassword(request: ChangePasswordRequest): JsonResponse
+  +activateAccount(request: Request): JsonResponse
+}
+
+class UserController {
+  +profile(): JsonResponse
+  +updateProfile(request: UserRequest): JsonResponse
+  +changeRole(request: Request): JsonResponse
+  +me(): JsonResponse
+  +index(): JsonResponse
+  +show(id: uuid): JsonResponse
+  +deactivate(id: uuid): JsonResponse
+}
+
+class AdoptionController {
+  +adopt(request: AdoptionRequest): JsonResponse
+  +approve(id: uuid): JsonResponse
+  +reject(id: uuid): JsonResponse
+  +requirements(id: uuid): JsonResponse
+  +setRequirement(id: uuid, request: RequirementRequest): JsonResponse
+  +approveRequirement(id: uuid): JsonResponse
+  +meetAndGreet(id: uuid, request: MeetAndGreetRequest): JsonResponse
+  +approveSchedule(id: uuid, request: ApproveScheduleRequest): JsonResponse
+  +handover(id: uuid, request: HandoverRequest): JsonResponse
+}
+
+class AttachmentController {
+  +upload(request: AttachmentRequest): JsonResponse
+  +download(id: uuid): FileResponse
+  +delete(id: uuid): JsonResponse
+  +listByRelated(module: string, reference_id: uuid): JsonResponse
+}
+
+class PetController {
+  +index(): JsonResponse
+  +show(id: uuid): JsonResponse
+  +store(request: PetRequest): JsonResponse
+  +update(request: PetRequest, id: uuid): JsonResponse
+  +delete(id: uuid): JsonResponse
+}
+
+class CommunityController {
+  +index(): JsonResponse
+  +show(id: uuid): JsonResponse
+  +store(request: CommunityRequest): JsonResponse
+  +update(id: uuid, request: CommunityRequest): JsonResponse
+  +delete(id: uuid): JsonResponse
+  +join(id: uuid): JsonResponse
+}
+
+class PostController {
+  +index(): JsonResponse
+  +store(request: PostRequest): JsonResponse
+  +show(id: uuid): JsonResponse
+  +update(id: uuid, request: PostRequest): JsonResponse
+  +delete(id: uuid): JsonResponse
+  +like(post_id: uuid): JsonResponse
+  +createComment(post_id: uuid, request: CommentRequest): JsonResponse
+  +updateComment(comment_id: uuid, request: CommentRequest): JsonResponse
+  +deleteComment(comment_id: uuid): JsonResponse
+}
+
+class ChatController {
+  +createChat(request: ChatRequest): JsonResponse
+  +deleteChat(chat_id: uuid): JsonResponse
+  +sendMessage(chat_id: uuid, request: MessageRequest): JsonResponse
+  +deleteMessage(message_id: uuid): JsonResponse
+  +listChats(): JsonResponse
+  +listMessages(chat_id: uuid): JsonResponse
+}
+
+class NotificationController {
+  +index(): JsonResponse
+  +markAsRead(id: uuid): JsonResponse
+}
+
+class TagController {
+  +index(type: string): JsonResponse
+  +store(request: TagRequest): JsonResponse
+}
+
+class ReportController {
+  +index(): JsonResponse
+  +store(request: ReportRequest): JsonResponse
+  +delete(report_id: uuid): JsonResponse
+  +action(report_id: uuid, request: ReportActionRequest): JsonResponse
+}
+
+' ==========================================
+' 3️⃣ SERVICE LAYER (LOGIKA BISNIS)
+' ==========================================
+class AuthService {
+  +register(data: array): User
+  +login(credentials: array): string
+  +logout(token: string): bool
+  +refreshToken(token: string): string
+  +changePassword(userId: uuid, oldPassword: string, newPassword: string): bool
+  +activateAccount(token: string): User
+}
+
+class UserService {
+  +getProfile(userId: uuid): User
+  +updateProfile(userId: uuid, data: array): User
+  +changeRole(userId: uuid, role: string): User
+  +getCurrentUser(userId: uuid): User
+  +listUsers(filters: array): User[]
+  +getUserById(id: uuid): User
+  +deactivateUser(id: uuid): bool
+}
+
+class PetService {
+  +listPets(filters: array): Pet[]
+  +getPetById(id: uuid): Pet
+  +createPet(data: array): Pet
+  +updatePet(id: uuid, data: array): Pet
+  +deletePet(id: uuid): bool
+}
+
+class AdoptionService {
+  +submitAdoption(data: array): Adoption
+  +approveApplication(id: uuid): Adoption
+  +rejectApplication(id: uuid): Adoption
+  +getRequirements(id: uuid): Requirement[]
+  +setRequirement(adoptionId: uuid, data: array): Requirement
+  +approveRequirement(requirementId: uuid): Requirement
+  +scheduleMeetAndGreet(adoptionId: uuid, data: array): Adoption
+  +approveSchedule(adoptionId: uuid, data: array): Adoption
+  +processHandover(adoptionId: uuid, data: array): Adoption
+}
+
+class AttachmentService {
+  +uploadFile(data: array): Attachment
+  +downloadFile(id: uuid): File
+  +deleteFile(id: uuid): bool
+  +listByReference(module: string, referenceId: uuid): Attachment[]
+}
+
+class CommunityService {
+  +listCommunities(filters: array): Community[]
+  +getCommunityById(id: uuid): Community
+  +createCommunity(data: array): Community
+  +updateCommunity(id: uuid, data: array): Community
+  +deleteCommunity(id: uuid): bool
+  +joinCommunity(userId: uuid, communityId: uuid): bool
+}
+
+class PostService {
+  +listPosts(filters: array): Post[]
+  +createPost(data: array): Post
+  +getPostById(id: uuid): Post
+  +updatePost(id: uuid, data: array): Post
+  +deletePost(id: uuid): bool
+  +likePost(postId: uuid, userId: uuid): bool
+  +createComment(postId: uuid, data: array): Comment
+  +updateComment(commentId: uuid, data: array): Comment
+  +deleteComment(commentId: uuid): bool
+}
+
+class ChatService {
+  +createChat(data: array): Chat
+  +deleteChat(chatId: uuid): bool
+  +sendMessage(chatId: uuid, data: array): Message
+  +deleteMessage(messageId: uuid): bool
+  +listChats(userId: uuid): Chat[]
+  +listMessages(chatId: uuid, filters: array): Message[]
+}
+
+class NotificationService {
+  +getUserNotifications(userId: uuid, filters: array): Notification[]
+  +markAsRead(id: uuid): bool
+  +createNotification(data: array): Notification
+}
+
+class TagService {
+  +listTags(type: string): Tag[]
+  +createTag(data: array): Tag
+}
+
+class ReportService {
+  +listReports(filters: array): Reports[]
+  +createReport(data: array): Reports
+  +deleteReport(reportId: uuid): bool
+  +takeAction(reportId: uuid, data: array): Reports
+}
+
+' ==========================================
+' 4️⃣ REPOSITORY LAYER
+' ==========================================
+class UserRepository {
+  +find(id: uuid): User
+  +findByEmail(email: string): User
+  +create(data: array): User
+  +update(id: uuid, data: array): User
+  +delete(id: uuid): bool
+  +all(filters: array): User[]
+}
+
+class PetRepository {
+  +find(id: uuid): Pet
+  +create(data: array): Pet
+  +update(id: uuid, data: array): Pet
+  +delete(id: uuid): bool
+  +all(filters: array): Pet[]
+}
+
+class AdoptionRepository {
+  +find(id: uuid): Adoption
+  +create(data: array): Adoption
+  +update(id: uuid, data: array): Adoption
+  +delete(id: uuid): bool
+  +all(filters: array): Adoption[]
+}
+
+class RequirementRepository {
+  +find(id: uuid): Requirement
+  +create(data: array): Requirement
+  +update(id: uuid, data: array): Requirement
+  +findByAdoption(adoptionId: uuid): Requirement[]
+}
+
+class MeetAndGreetRepository {
+  +find(id: uuid): MeetAndGreet
+  +create(data: array): MeetAndGreet
+  +update(id: uuid, data: array): MeetAndGreet
+  +findByAdoption(adoptionId: uuid): MeetAndGreet
+}
+
+class HandoverRepository {
+  +find(id: uuid): Handover
+  +create(data: array): Handover
+  +update(id: uuid, data: array): Handover
+  +findByAdoption(adoptionId: uuid): Handover
+}
+
+class AttachmentRepository {
+  +find(id: uuid): Attachment
+  +create(data: array): Attachment
+  +delete(id: uuid): bool
+  +findByReference(module: string, referenceId: uuid): Attachment[]
+}
+
+class CommunityRepository {
+  +find(id: uuid): Community
+  +create(data: array): Community
+  +update(id: uuid, data: array): Community
+  +delete(id: uuid): bool
+  +all(filters: array): Community[]
+  +addMember(communityId: uuid, userId: uuid): bool
+}
+
+class PostRepository {
+  +find(id: uuid): Post
+  +create(data: array): Post
+  +update(id: uuid, data: array): Post
+  +delete(id: uuid): bool
+  +all(filters: array): Post[]
+}
+
+class CommentRepository {
+  +find(id: uuid): Comment
+  +create(data: array): Comment
+  +update(id: uuid, data: array): Comment
+  +delete(id: uuid): bool
+  +findByPost(postId: uuid): Comment[]
+}
+
+class ChatRepository {
+  +find(id: uuid): Chat
+  +create(data: array): Chat
+  +delete(id: uuid): bool
+  +findByUser(userId: uuid): Chat[]
+}
+
+class MessageRepository {
+  +find(id: uuid): Message
+  +create(data: array): Message
+  +delete(id: uuid): bool
+  +findByChat(chatId: uuid, filters: array): Message[]
+}
+
+class NotificationRepository {
+  +find(id: uuid): Notification
+  +create(data: array): Notification
+  +update(id: uuid, data: array): Notification
+  +findByUser(userId: uuid, filters: array): Notification[]
+}
+
+class TagRepository {
+  +find(id: uuid): Tag
+  +create(data: array): Tag
+  +all(type: string): Tag[]
+}
+
+class ReportRepository {
+  +find(id: uuid): Reports
+  +create(data: array): Reports
+  +update(id: uuid, data: array): Reports
+  +delete(id: uuid): bool
+  +all(filters: array): Reports[]
+}
+
+' ==========================================
+' 5️⃣ MODEL LAYER (ENTITAS DOMAIN)
+' ==========================================
+class User {
+  #id : uuid
+  +email : string
+  -password : string
+  +username : string
+  --
+  +register(): void
+  +login(): void
+}
+
+class Role {
+  #id : uuid
+  +name : string
+  --
+  +assignPermission(): void
+}
+
+class permission {
+  #id : uuid
+  +name : string
+}
+
+class Pet {
+  #id : uuid
+  +name : string
+  +species : string
+  -age : int
+  #owner_id : uuid (FK)
+  #status_id : uuid (FK)
+  --
+  +createPost(): void
+  +updateDetails(): void
+}
+
+class Adoption {
+  #id : uuid
+  #pet_id : uuid (FK)
+  #adopter_id : uuid (FK)
+  #status_id : uuid (FK)
+  --
+  +submitApplication(): void
+  +approveApplication(): void
+}
+
+class Community {
+  #id : uuid
+  +name : string
+  #admin_user_id : uuid (FK)
+  --
+  +createCommunity(): void
+  +addMember(): void
+}
+
+class Post {
+  #id : uuid
+  +title : string
+  -content : text
+  #community_id : uuid (FK)
+  #user_id : uuid (FK)
+  --
+  +createPost(): void
+}
+
+class Comment {
+  #id : uuid
+  #user_id : uuid (FK)
+  #post_id : uuid (FK)
+  +content : text
+}
+
+class Message {
+  #id : uuid
+  #chat_id : uuid (FK)
+  #sender_id : uuid (FK)
+  +content : text
+}
+
+class Chat {
+  #id : uuid
+  #user1_id : uuid (FK)
+  #user2_id : uuid (FK)
+}
+
+class Requirement {
+  #id : uuid
+  #adoption_id : uuid (FK)
+  +description : string
+  +is_approved : bool
+}
+
+class MeetAndGreet {
+  #id : uuid
+  #adoption_id : uuid (FK)
+  +type : string
+  +status : string
+  +schedule_date : datetime
+}
+
+class Handover {
+  #id : uuid
+  #adoption_id : uuid (FK)
+  +handover_date : date
+  +status : string
+}
+
+class Attachment {
+  #id : uuid
+  +file_url : string
+  #related_id : uuid
+  +related_type : string
+}
+
+class Schedule {
+  #id : uuid
+  #user_id : uuid (FK)
+  +start_time : datetime
+  +end_time : datetime
+}
+
+class Address {
+  #id : uuid
+  #user_id : uuid (FK)
+  +province : string
+  +city : string
+  +street : string
+}
+
+class Status {
+  #id : uuid
+  +name : string
+}
+
+class Notification {
+  #id : uuid
+  #user_id : uuid (FK)
+  +message : string
+  +is_read : bool
+}
+
+class Reports {
+  #id : uuid
+  #reporter_id : uuid (FK)
+  +description : text
+  +status : string
+}
+
+class Tag {
+  #id : uuid
+  +name : string
+  +type : string
+}
+
+' ==========================================
+' 6️⃣ RELASI FRONTEND -> REQUEST
+' ==========================================
+RegisterPage --> RegisterRequest
+LoginPage --> LoginRequest
+ChangePasswordPage --> ChangePasswordRequest
+ProfilePage --> UserRequest
+UserManagementPage --> UserRequest
+PetListingPage --> PetController
+PetDetailPage --> AdoptionRequest
+PetManagementPage --> PetRequest
+AdoptionPage --> AdoptionRequest
+CommunityPage --> CommunityRequest
+PostPage --> PostRequest
+PostPage --> CommentRequest
+ChatPage --> ChatRequest
+ChatPage --> MessageRequest
+NotificationPage --> NotificationController
+ReportPage --> ReportRequest
+TagPage --> TagRequest
+AttachmentPage --> AttachmentRequest
+
+' ==========================================
+' 7️⃣ RELASI REQUEST -> CONTROLLER
+' ==========================================
+RegisterRequest --> AuthController
+LoginRequest --> AuthController
+ChangePasswordRequest --> AuthController
+UserRequest --> UserController
+AdoptionRequest --> AdoptionController
+RequirementRequest --> AdoptionController
+MeetAndGreetRequest --> AdoptionController
+ApproveScheduleRequest --> AdoptionController
+HandoverRequest --> AdoptionController
+AttachmentRequest --> AttachmentController
+PetRequest --> PetController
+CommunityRequest --> CommunityController
+PostRequest --> PostController
+CommentRequest --> PostController
+ChatRequest --> ChatController
+MessageRequest --> ChatController
+TagRequest --> TagController
+ReportRequest --> ReportController
+ReportActionRequest --> ReportController
+
+' ==========================================
+' 8️⃣ RELASI CONTROLLER -> SERVICE
+' ==========================================
+AuthController --> AuthService
+UserController --> UserService
+PetController --> PetService
+AdoptionController --> AdoptionService
+AttachmentController --> AttachmentService
+CommunityController --> CommunityService
+PostController --> PostService
+ChatController --> ChatService
+NotificationController --> NotificationService
+TagController --> TagService
+ReportController --> ReportService
+
+' ==========================================
+' 9️⃣ RELASI SERVICE -> REPOSITORY
+' ==========================================
+AuthService --> UserRepository
+UserService --> UserRepository
+PetService --> PetRepository
+AdoptionService --> AdoptionRepository
+AdoptionService --> RequirementRepository
+AdoptionService --> MeetAndGreetRepository
+AdoptionService --> HandoverRepository
+AttachmentService --> AttachmentRepository
+CommunityService --> CommunityRepository
+PostService --> PostRepository
+PostService --> CommentRepository
+ChatService --> ChatRepository
+ChatService --> MessageRepository
+NotificationService --> NotificationRepository
+TagService --> TagRepository
+ReportService --> ReportRepository
+
+' ==========================================
+' 🔟 RELASI REPOSITORY -> MODEL
+' ==========================================
+UserRepository --> User
+PetRepository --> Pet
+AdoptionRepository --> Adoption
+RequirementRepository --> Requirement
+MeetAndGreetRepository --> MeetAndGreet
+HandoverRepository --> Handover
+AttachmentRepository --> Attachment
+CommunityRepository --> Community
+PostRepository --> Post
+CommentRepository --> Comment
+ChatRepository --> Chat
+MessageRepository --> Message
+NotificationRepository --> Notification
+TagRepository --> Tag
+ReportRepository --> Reports
+
+' ==========================================
+' 1️⃣1️⃣ RELASI DOMAIN ANTAR MODEL
+' ==========================================
+User "N" -- "N" Role : memiliki
+Role "N" -- "N" permission : memiliki
+
+User "1" -- "N" Pet : memiliki
+Pet "1" -- "1" User : dimiliki_oleh
+
+Pet "1" -- "1" Adoption : diadopsi_via
+Adoption "1" -- "1" User : diajukan_oleh
+
+Community "1" -- "N" Post : memiliki
+User "1" -- "N" Post : membuat
+User "1" -- "N" Comment : menulis
+Post "1" -- "N" Comment : memiliki
+
+Chat "1" -- "N" Message : berisi
+User "1" -- "N" Message : mengirim
+
+Adoption "1" -- "N" Requirement : memiliki
+Adoption "1" -- "1" MeetAndGreet : memiliki
+Adoption "1" -- "1" Handover : diakhiri_dengan
+
+Attachment "1" -- "1" Pet : terkait_dengan
+Schedule "N" -- "1" User : dijadwalkan_oleh
+Address "1" -- "1" User : dimiliki_oleh
+Notification "N" -- "1" User : dikirim_ke
+Reports "N" -- "1" User : dilaporkan_oleh
+Tag "N" -- "N" Post : ditandai_pada
+Status "1" -- "N" Adoption : menentukan_status
+Status "1" -- "N" Pet : menentukan_status
+
+@enduml
