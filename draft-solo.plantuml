@@ -1,0 +1,301 @@
+@startuml FuPet_Complete_Architecture
+skinparam monochrome true
+skinparam class {
+  BackgroundColor White
+  ArrowColor Black
+  BorderColor Black
+  FontColor Black
+  FontSize 10
+}
+skinparam legend padding 10
+hide circle
+skinparam classAttributeIconSize 0
+
+
+' ===================
+' CLASSES
+' ===================
+
+class Status {
+  + id: int
+  + statusName: string
+}
+
+class Adoption {
+  + id: uuid
+  + pet_id: uuid (FK)
+  + provider_id: uuid (FK)
+  + adopter_id: uuid (FK)
+  + status_id: int (FK)
+  + created_at: datetime
+  + updated_at: datetime
+}
+
+class Requirement {
+  + id: uuid
+  + adoption_id: uuid (FK)
+  + requirement_text: string
+  + status_id: int (FK)
+  + created_at: datetime
+}
+
+class MeetNGreet {
+  + id: uuid
+  + adoption_id: uuid (FK)
+  + status_id: int (FK)
+  + created_at: datetime
+}
+
+class Handover {
+  + id: uuid
+  + adoption_id: uuid (FK)
+  + status_id: int (FK)
+  + created_at: datetime
+}
+
+class Schedule {
+  + id: uuid
+  + schedulable_id: uuid (FK)
+  + schedulable_type: string
+  + proposed_date: datetime
+  + confirmed_date: datetime
+  + proposed_by: uuid (FK)
+  + status: string
+}
+
+class Attachment {
+  + id: uuid
+  + attachable_id: uuid (FK)
+  + attachable_type: string
+  + file_path: string
+  + uploaded_by: uuid (FK)
+  + created_at: datetime
+}
+
+class Pet {
+  + id: uuid
+  + name: string
+  + species: string
+  + age: int
+  + owner_id: uuid (FK)
+  + status_id: int (FK)
+  + created_at: datetime
+  + CreateDetail(): void
+  + UpdateDetails(): void
+}
+
+class User {
+  + id: uuid
+  + username: string
+  + password: string
+  + email: string
+  + created_at: datetime
+  + register(): void
+  + login(): void
+}
+
+class Chat {
+  + id: uuid
+  + adoption_id: uuid (FK)
+  + created_at: datetime
+}
+
+class Message {
+  + id: uuid
+  + chat_id: uuid (FK)
+  + sender_id: uuid (FK)
+  + message: text
+  + created_at: datetime
+}
+
+class Notification {
+  + id: uuid
+  + user_id: uuid (FK)
+  + type: string
+  + title: string
+  + message: string
+  + is_read: boolean
+  + created_at: datetime
+  + GetNotificationDetail(): void
+  + MarkAsRead(): void
+}
+
+class Tag {
+  + id: uuid
+  + name: string
+  + created_by: uuid (FK)
+  + created_at: datetime
+}
+
+class Role {
+  + id: int
+  + name: string
+  + created_at: datetime
+  + AssignPermission(): void
+}
+
+class Permission {
+  + id: int
+  + name: string
+  + description: string
+}
+
+class Post {
+  + id: uuid
+  + author_id: uuid (FK)
+  + community_id: uuid (FK)
+  + title: string
+  + content: text
+  + created_at: datetime
+}
+
+class Comment {
+  + id: uuid
+  + post_id: uuid (FK)
+  + user_id: uuid (FK)
+  + content: text
+  + created_at: datetime
+}
+
+class Community {
+  + id: uuid
+  + name: string
+  + description: text
+  + created_at: datetime
+}
+
+class Reports {
+  + id: uuid
+  + reporter_id: uuid (FK)
+  + reportable_id: uuid (FK)
+  + reportable_type: string
+  + reason: text
+  + status: string
+  + created_at: datetime
+}
+
+' ===================
+' RELATIONSHIPS
+' ===================
+
+' Status Relationships (Aggregation - Status can exist independently)
+Status "1" o-- "0..*" Adoption : has_status
+Status "1" o-- "0..*" Requirement : has_status
+Status "1" o-- "0..*" MeetNGreet : has_status
+Status "1" o-- "0..*" Handover : has_status
+
+' Adoption Flow Relationships (Composition - these are part of Adoption lifecycle)
+Adoption "1" *-- "0..*" Requirement : includes
+Adoption "1" *-- "0..1" Handover : includes
+Adoption "1" *-- "0..1" MeetNGreet : includes
+
+' Adoption-User Relationships (Provider and Adopter roles)
+Adoption "0..*" -- "1" User : provider
+Adoption "0..*" -- "1" User : adopter
+
+' Adoption-Pet Relationship
+Adoption "0..1" -- "1" Pet : for_pet
+
+' Attachment Relationships (Composition - attachments belong to their parent)
+Requirement "1" *-- "0..*" Attachment : has_attachments
+Handover "1" *-- "0..*" Attachment : has_attachments
+Pet "1" *-- "0..*" Attachment : has_photos
+Post "1" *-- "0..*" Attachment : has_media
+
+' Attachment uploader tracking
+Attachment "0..*" -- "1" User : uploaded_by
+
+' Schedule Relationships (Composition - schedule is part of the event)
+MeetNGreet "1" *-- "1" Schedule : has_schedule
+Handover "1" *-- "1" Schedule : has_schedule
+
+' Schedule proposer tracking
+Schedule "0..*" -- "1" User : proposed_by
+
+' Pet Relationships
+Pet "0..*" -- "1" User : owned_by
+Pet "0..*" o-- "0..*" Tag : tagged_with
+
+' User-Role Relationships (Aggregation)
+User "0..*" o-- "1..*" Role : has_roles
+
+' User-generated Content
+User "1" *-- "0..*" Notification : receives
+User "1" o-- "0..*" Tag : creates
+User "1" *-- "0..*" Post : authors
+User "1" *-- "0..*" Comment : writes
+
+' User-Post Likes (Many-to-Many)
+User "0..*" -- "0..*" Post : likes
+
+' Role & Permission (Aggregation - permissions are shared across roles)
+Role "1..*" o-- "0..*" Permission : has_permissions
+
+' Chat Relationships
+Adoption "1" -- "0..1" Chat : has_chat
+Chat "1" *-- "0..*" Message : contains
+Chat "2" -- "2" User : between_users
+Message "0..*" -- "1" User : sent_by
+
+' Post Relationships (Composition - comments belong to post)
+Post "1" *-- "0..*" Comment : has_comments
+Post "0..*" o-- "0..*" Tag : tagged_with
+
+' Community Relationships (Aggregation - posts and tags can exist independently)
+Community "1" o-- "0..*" Post : contains
+Community "1..*" -- "1..*" User : admins
+Community "0..*" -- "0..*" User : members
+Community "1" o-- "0..*" Tag : uses
+
+' Reports Relationships (Aggregation - reported items exist independently)
+Reports "0..*" -- "1" User : reported_by
+Reports "0..*" o-- "0..1" User : reports_user
+Reports "0..*" o-- "0..1" Pet : reports_pet
+Reports "0..*" o-- "0..1" Post : reports_post
+Reports "0..*" o-- "0..1" Community : reports_community
+
+legend left
+== Relationship Types ==
+
+**Composition (*--): Strong ownership, child cannot exist without parent**
+- Requirement, MeetNGreet, Handover are part of Adoption lifecycle
+- Attachments belong to their parent entity
+- Schedule is integral part of MeetNGreet/Handover
+- Messages belong to Chat
+- Comments belong to Post
+- Notifications belong to User
+
+**Aggregation (o--): Weak association, child can exist independently**
+- Status is shared across multiple entities
+- Tags are reusable across Pets, Posts, Communities
+- Roles & Permissions are shared security concepts
+- Community posts can exist after community deletion
+- Reports reference existing entities
+
+**Simple Association (--): Basic relationship**
+- User-Pet ownership (provider role)
+- Adoption connects Provider, Adopter, and Pet
+- User-Community membership and administration
+- User-Role assignment
+- Many-to-many relationships (likes, tags)
+
+== Key Participants in Adoption Process ==
+
+**Provider (User)**: Owns the Pet, sets Requirements
+**Adopter (User)**: Applies for adoption, fulfills Requirements
+**Both**: Participate in MeetNGreet and Handover with equal responsibility
+
+== Process Flow ==
+1. Provider creates Adoption for their Pet
+2. Adopter applies (becomes linked to Adoption)
+3. Provider sets Requirements
+4. Adopter fulfills Requirements (uploads Attachments)
+5. Both agree on MeetNGreet Schedule
+6. Both participate in MeetNGreet
+7. Both agree on Handover Schedule
+8. Both complete Handover (upload evidence)
+9. Pet ownership transfers to Adopter
+
+endlegend
+
+@enduml
