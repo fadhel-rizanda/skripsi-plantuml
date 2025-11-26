@@ -14,7 +14,7 @@ hide footbox
 actor Pengguna
 participant "Community Page (Next.js FE)" as FE
 participant "CommunityController (Laravel BE)" as BE_Community
-participant "FilterController (Laravel BE)" as BE_Filter
+participant "TagController (Laravel BE)" as BE_Filter
 participant "Cache (Redis)" as Redis
 database "Database (PostgreSQL)" as DB
 
@@ -46,14 +46,14 @@ activate FE
         activate FE
         FE -> Pengguna: Tampilkan daftar komunitas di tab "All Communities"
 
-    FE -> BE_Filter: GET /api/community-filters
+    FE -> BE_Filter: GET /api/tags
     activate BE_Filter
-    BE_Filter -> Redis: GET cache:community_filters
+    BE_Filter -> Redis: GET cache:community_tags
     activate Redis
 
     alt Cache tersedia
-        Redis --> BE_Filter: Return cached filters
-        BE_Filter --> FE: 200 OK (Cached filters)
+        Redis --> BE_Filter: Return cached tags
+        BE_Filter --> FE: 200 OK (Cached tags)
         deactivate BE_Filter
     else Cache kosong / expired
         Redis --> BE_Filter: Cache miss
@@ -63,11 +63,11 @@ activate FE
         activate DB
         DB --> BE_Filter: Return filter data
         deactivate DB
-        BE_Filter -> Redis: SET cache:community_filters (data, expired 1 jam)
+        BE_Filter -> Redis: SET cache:community_tags (data, expired 1 jam)
         activate Redis
         Redis --> BE_Filter: OK
         deactivate Redis
-        BE_Filter --> FE: 200 OK (Filters from DB)
+        BE_Filter --> FE: 200 OK (Tags from DB)
         deactivate BE_Filter
     FE -> FE:Simpan filter di FE
     activate FE #LightBlue

@@ -13,9 +13,9 @@ hide footbox
 ' === Participants ===
 actor Pengguna
 participant "Post Detail Page (Next.js FE)" as FE
-participant "LikeController (Laravel BE)" as BE
+participant "PostController (Laravel BE)" as BE
 database "Database (PostgreSQL)" as DB
-participant "NotificationService (Laravel BE)" as NS
+participant "NotificationSent (Laravel BE)" as NS
 actor "Pengguna (Pemilik Post)" as FE_Adopter
 
 ' === Flow 1: Membuka Halaman Detail Post ===

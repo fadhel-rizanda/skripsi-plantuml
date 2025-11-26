@@ -16,7 +16,7 @@ actor Pengguna
 participant "Posts Page (Next.js FE)" as FE
 participant "PostController (Laravel BE)" as BE
 database "Database (PostgreSQL)" as DB
-participant "NotificationService  (Laravel BE)" as NS
+participant "NotificationSent  (Laravel BE)" as NS
 
 ' === Flow A: Admin Menghapus Post ===
 group Admin Menghapus Post

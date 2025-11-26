@@ -15,7 +15,7 @@ actor "Pengguna (Calon Pengadopsi / Penyedia Hewan)" as Pengguna
 participant "Adoption Detail Page (Next.js FE)" as FE
 participant "AdoptionController (Laravel BE)" as BE
 database "Database (PostgreSQL)" as DB
-participant "NotificationService (Laravel BE)" as NS
+participant "NotificationSent (Laravel BE)" as NS
 actor "Pengguna (Penyedia Hewan / Calon Pengadopsi)" as FE_Other
 
 ' === Flow: Membuka Halaman Meet & Greet ===

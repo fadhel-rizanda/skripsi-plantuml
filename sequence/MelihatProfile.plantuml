@@ -13,7 +13,7 @@ hide footbox
 ' === Participants ===
 actor Pengguna
 participant "Profile Page (Next.js FE)" as FE
-participant "ProfileController (Laravel BE)" as BE
+participant "UserController (Laravel BE)" as BE
 database "Database (PostgreSQL)" as DB
 
 ' === Normal Flow: Melihat Profil ===

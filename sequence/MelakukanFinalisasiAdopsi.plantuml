@@ -15,7 +15,7 @@ actor Admin
 participant "Adoption Process Page (Next.js FE)" as FE
 participant "AdoptionProcessController (Laravel BE)" as BE
 database "PostgreSQL (DB)" as DB
-participant "NotificationService (Laravel BE)" as NS
+participant "NotificationSent (Laravel BE)" as NS
 actor "Pengguna (Calon Pengadopsi & Penyedia Hewan)" as FE_Adopter
 
 ' === Akses Data Proses Adopsi ===

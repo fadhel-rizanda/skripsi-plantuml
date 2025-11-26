@@ -16,7 +16,7 @@ actor Pengguna
 participant "Communities Page (Next.js FE)" as FE
 participant "CommunityController (Laravel BE)" as BE
 database "Database (PostgreSQL)" as DB
-participant "NotificationService (Laravel BE)" as NS
+participant "NotificationSent (Laravel BE)" as NS
 actor "Pengguna (Admin Komunitas)" as FE_Creator
 
 ' === Flow A: Admin Menghapus Komunitas ===

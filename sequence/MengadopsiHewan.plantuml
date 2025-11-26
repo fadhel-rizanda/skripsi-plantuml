@@ -15,7 +15,7 @@ actor "Calon Pengadopsi" as Adopter
 participant "Pet Detail Page (Next.js FE)" as FE
 participant "AdoptionController (Laravel BE)" as BE
 database "Database (PostgreSQL)" as DB
-participant "NotificationService (Laravel BE)" as NS
+participant "NotificationSent (Laravel BE)" as NS
 actor "Penyedia Hewan" as FE_Adopter
 
 title Mengadopsi Hewan (Overview)

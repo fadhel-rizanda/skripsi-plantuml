@@ -15,7 +15,7 @@ actor "Penyedia Hewan" as Provider
 participant "Adoption Page (Next.js FE)" as FE
 participant "RequirementController (Laravel BE)" as BE
 database "Database (PostgreSQL)" as DB
-participant "NotificationService (Laravel BE)" as NS
+participant "NotificationSent (Laravel BE)" as NS
 actor "Calon Pengadopsi" as FE_Adopter
 
 ' === Flow: Membuka Proses Adopsi ===

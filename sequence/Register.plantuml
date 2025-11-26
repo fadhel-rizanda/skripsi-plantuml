@@ -16,14 +16,14 @@ participant "Register Page (Next.js FE)" as FE
 participant "AuthController (Laravel BE)" as BE
 participant "Cache (Redis)" as Redis
 database "Database (PostgreSQL)" as DB
-participant "EmailService (Laravel BE)" as Mailer
+participant "ActivationCodeNotification (Laravel BE)" as Mailer
 participant "Google OAuth" as Google
 
 ' === Registration Flow ===
 alt Register secara manual
 Pengguna -> FE: Isi form (username, email, password)
 activate FE
-FE -> BE: POST /api/register { username, email, password }
+FE -> BE: POST /api/register { username, email, password, role }
 deactivate FE
 activate BE
 BE -> BE: Validasi data input
@@ -84,6 +84,10 @@ alt Pengguna pilih "Verify Code"
         activate BE #LightBlue
         deactivate BE #LightBlue
     alt OTP valid
+    BE -> Redis: DELETE OTP:{user_id}
+            activate Redis
+            Redis --> BE: OK
+            deactivate Redis
         BE -> DB: perbarui data user is_verified=true
         activate DB
         DB --> BE: Success (User verified)

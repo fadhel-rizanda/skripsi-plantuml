@@ -14,7 +14,7 @@ hide footbox
 actor "Penyedia Hewan" as Provider
 participant "Next.js FE (Pet Page)" as FE
 participant "Laravel BE (PetController)" as BE
-participant "FileUploadController" as FileBE
+participant "AttachmentController" as FileBE
 participant "Redis Cache" as Redis
 participant "Cloud Storage (S3)" as Storage
 database "Database" as DB
@@ -56,7 +56,7 @@ deactivate FE
 alt Ada file baru
 Provider -> FE: Isi form dan mengunggah file baru
 activate FE
-    FE -> FileBE: GET /api/file-upload/presigned-url
+    FE -> FileBE: GET /api/attachments/presigned-url
     deactivate FE
     activate FileBE
 
@@ -202,7 +202,7 @@ deactivate FE
 alt Ada file baru
     Provider -> FE: Submit form edit dan file baru
     activate FE
-    FE -> FileBE: GET /api/file-upload/presigned-url
+    FE -> FileBE: GET /api/attachments/presigned-url
     deactivate FE
     activate FileBE
 

@@ -13,8 +13,8 @@ hide footbox
 ' === Participants ===
 actor Pengguna
 participant "Preferences Page (Next.js FE)" as FE
-participant "PreferencesController (Laravel BE)" as BE_Pref
-participant "FilterController (Laravel BE)" as BE_Filter
+participant "UserController (Laravel BE)" as BE_Pref
+participant "TagController (Laravel BE)" as BE_Filter
 participant "Cache (Redis)" as Redis
 database "Database (PostgreSQL)" as DB
 
@@ -24,7 +24,7 @@ activate FE
 
 ' --- Paralel Request ---
 par Ambil data preferences user
-    FE -> BE_Pref: GET /api/preferences
+    FE -> BE_Pref: GET /api/user/preferences
     activate BE_Pref
     BE_Pref -> DB: Mengambil data preferences user
     activate DB
@@ -74,7 +74,7 @@ alt Pengguna memilih "Skip for later"
 ' === User Mengisi Form ===
 Pengguna -> FE: Mengisi personality, pengalaman, dan preferensi hewan
 activate FE
-FE -> BE_Pref: POST /api/preferences {data_preferensi}
+FE -> BE_Pref: POST /api/user/preferences {data_preferensi}
 deactivate FE
 activate BE_Pref
     BE_Pref -> DB: Simpan data preferences untuk user

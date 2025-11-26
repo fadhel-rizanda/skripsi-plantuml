@@ -14,7 +14,7 @@ hide footbox
 actor "Pengguna" as Provider
 participant "Next.js FE (Post Page)" as FE
 participant "Laravel BE (PostController)" as BE
-participant "FileUploadController" as FileBE
+participant "AttachmentController" as FileBE
 participant "Redis Cache" as Redis
 participant "Cloud Storage (S3)" as Storage
 database "Database" as DB
@@ -57,7 +57,7 @@ deactivate FE
 alt Ada gambar baru
 Provider -> FE: Isi form dan mengunggah gambar baru
 activate FE
-    FE -> FileBE: GET /api/file-upload/presigned-url
+    FE -> FileBE: GET /api/attachments/presigned-url
     deactivate FE
     activate FileBE
 

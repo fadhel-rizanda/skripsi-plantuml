@@ -12,10 +12,10 @@ hide footbox
 
 actor "Calon Pengadopsi" as Adopter
 participant "Application Reviewed Page (Next.js FE)" as FE
-participant "FileUploadController (Laravel BE)" as BE
+participant "AttachmentController (Laravel BE)" as BE
 participant "Cloud Storage (S3)" as Storage
 database "Database(PostgreSQL)" as DB
-participant "NotificationService (Laravel BE)" as Reverb
+participant "NotificationSent (Laravel BE)" as Reverb
 actor "Penyedia Hewan" as Provider
 
 '== Membuka Halaman Application Reviewed ==
@@ -35,7 +35,7 @@ deactivate FE
 '== Mengunggah Dokumen Requirement ==
 Adopter -> FE: Tekan tombol "Upload File" dan masukan file terkait
 activate FE
-FE -> BE: GET /api/file-upload/presigned-url
+FE -> BE: GET /api/attachments/presigned-url
 deactivate FE
 activate BE
 

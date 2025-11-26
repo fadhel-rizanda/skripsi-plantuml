@@ -13,7 +13,7 @@ hide footbox
 ' === Participants ===
 actor Pengguna
 participant "Post Detail Page (Next.js FE)" as FE
-participant "CommentController (Laravel BE)" as BE
+participant "PostController (Laravel BE)" as BE
 database "Database (PostgreSQL)" as DB
 
 ' === Normal Flow: Melihat Komentar ===

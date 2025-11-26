@@ -15,7 +15,7 @@ actor Admin
 participant "Users Page (Next.js FE)" as FE
 participant "UserController (Laravel BE)" as BE
 database "Database (PostgreSQL)" as DB
-participant "EmailService (Laravel BE)" as ES
+participant "DeactivateNotification (Laravel BE)" as ES
 
 ' === Akses Data Pengguna ===
     Admin -> FE: Klik menu "Users" pada navbar

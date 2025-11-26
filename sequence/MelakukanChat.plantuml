@@ -14,7 +14,7 @@ hide footbox
 actor "Pengguna (Calon Pengadopsi / Penyedia Hewan)" as Pengguna
 participant "Chat Page (Next.js FE)" as FE
 participant "ChatController (Laravel BE)" as BE
-participant "NotificationService (Laravel BE)" as Reverb
+participant "NotificationSent (Laravel BE)" as Reverb
 database "Database (PostgreSQL)" as DB
 actor "Pengguna (Penyedia Hewan / Calon Pengadopsi)" as FE_Receiver
 
