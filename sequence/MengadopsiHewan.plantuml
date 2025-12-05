@@ -16,7 +16,8 @@ participant "Pet Detail Page (Next.js FE)" as FE
 participant "AdoptionController (Laravel BE)" as BE
 database "Database (PostgreSQL)" as DB
 participant "NotificationSent (Laravel BE)" as NS
-actor "Penyedia Hewan" as FE_Adopter
+actor "Penyedia Hewan" as Provider
+actor Admin
 
 title Mengadopsi Hewan (Overview)
 
@@ -37,7 +38,8 @@ alt Validasi berhasil (profile lengkap & pet tersedia)
         activate BE
         BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}
         activate NS
-        NS -> FE_Adopter: Push notification "Congratulations! Your adoption has been completed"
+        NS -> Provider: Push notification "Congratulations! Your adoption has been completed"
+        NS -> Adopter: Push notification "Congratulations! Your adoption has been completed"
         NS --> BE: Event broadcasted
 
         deactivate NS
@@ -57,45 +59,117 @@ alt Validasi berhasil (profile lengkap & pet tersedia)
         FE -> Adopter: Tampilkan pesan "Failed to create adoption application"
         deactivate FE
     end
+ alt Klik tombol "Approve"
+        Admin -> FE: Klik tombol "Approve" pada kolom Action
+    activate FE
 
+    ' === Validasi di frontend ===
+    FE -> FE: Validasi status proses (siap untuk finalisasi)
+    activate FE #LightBlue
+    deactivate FE #LightBlue
 
-' === Flow 2: Melihat Progress Adopsi ===
-'Adopter -> FE: Buka halaman "My Applications"
-'activate FE
-'FE -> BE: GET /api/adoptions/user/{user_id}
-'deactivate FE
-'activate BE
-'BE -> DB: Ambil semua adoption applications milik user
-'activate DB
-'DB --> BE: Return list of applications / null
-'deactivate DB
-'BE --> FE: 200 OK (List of applications dengan status)
-'deactivate BE
-'activate FE
-'FE -> Adopter: Tampilkan daftar aplikasi adopsi dengan tahapan masing-masing
-'deactivate FE
-'
-'note right of FE
-'    Setiap tahapan memiliki use case tersendiri:
-'
-'    **UC-01: Upload Requirements**
-'    - Adopter upload dokumen persyaratan
-'    - Status berubah ke "Application Submitted"
-'
-'    **UC-02: Provider Review Application**
-'    - Provider review & approve/reject
-'    - Status berubah ke "Application Reviewed"
-'
-'    **UC-03: Schedule Meet & Greet**
-'    - Provider tentukan jadwal pertemuan
-'    - Status berubah ke "Meet & Greet Scheduled"
-'
-'    **UC-04: Complete Adoption**
-'    - Adopter upload bukti hand over
-'    - Status berubah ke "Completed"
-'
-'    Setiap use case akan memiliki
-'    sequence diagram detail tersendiri
-'end note
+    FE -> Admin: Tampilkan pop-up konfirmasi finalisasi proses adopsi
+    deactivate FE
+
+    alt  konfirmasi "Continue"
+        Admin -> FE: Klik "Continue"
+        activate FE
+        FE -> BE: PUT /api/adoptions/{id}/finalize
+        deactivate FE
+        activate BE
+        BE -> DB: Update status proses adopsi menjadi "Completed"
+        deactivate BE
+        activate DB
+
+        alt Finalisasi berhasil
+            DB --> BE: OK (Status updated)
+            activate BE
+
+            deactivate FE
+            BE -> NS: Broadcast event "MessageSent" ke channel "notification.{user_id}
+            activate NS
+            NS -> Provider: Push notification "Congratulations! Your adoption has been completed"
+            NS -> Adopter: Push notification "Congratulations! Your adoption has been completed"
+            NS --> BE: Event broadcasted
+            deactivate NS
+            BE --> FE: 200 OK ("Adoption process finalized successfully")
+            deactivate BE
+            activate FE
+            FE -> Admin: Tampilkan pesan "Adoption process finalized successfully"
+            deactivate FE
+        else Gagal memperbarui status
+            DB --> BE: Error (Update failed)
+            deactivate DB
+            activate BE
+            BE --> FE: 500 Internal Server Error ("Failed to finalize adoption process")
+            deactivate BE
+            activate FE
+            FE -> Admin: Tampilkan pesan "Failed to finalized adoption process. Please try again"
+            deactivate FE
+        end
+
+    else Admin membatalkan konfirmasi
+        Admin -> FE: Klik "Cancel"
+        activate FE
+        FE -> Admin: Tutup pop-up, proses adopsi tetap tersimpan
+        deactivate FE
+    end
+    else Klik tombol "Reject"
+        Admin -> FE: Klik tombol "Reject"
+        activate FE
+
+        ' === Validasi di frontend ===
+        FE -> FE: Validasi status proses (belum Approved/Rejected)
+        activate FE #LightBlue
+        deactivate FE #LightBlue
+
+        FE -> Admin: Tampilkan pop-up konfirmasi penolakan
+        deactivate FE
+
+        alt  Konfirmasi "Continue"
+            Admin -> FE: Klik "Continue"
+            activate FE
+            FE -> BE: PUT /api/adoptions/{id}/reject
+            deactivate FE
+            activate BE
+            BE -> DB: Update status proses adopsi menjadi "Rejected"
+            deactivate BE
+            activate DB
+
+            alt Penolakan berhasil
+                DB --> BE: Success (Status updated)
+                activate BE
+                ' === Kirim notifikasi ke pihak terkait ===
+                BE -> NS: Broadcast event "MessageSent" ke channel "chat.{room_id}"
+                activate NS
+                NS -> Provider: Push notification "Your adoption process has been rejected by admin"
+                NS -> Adopter: Push notification "Your adoption process has been rejected by admin"
+            NS --> BE: Event broadcasted
+                deactivate NS
+                BE --> FE: 200 OK ("Adoption process rejected successfully")
+                deactivate BE
+                activate FE
+
+                FE -> Admin: Tampilkan pesan "Adoption process rejected successfully"
+                deactivate FE
+
+            else Gagal memperbarui status
+                DB --> BE: Error (e.g., constraint violation / data not found / connection failure)
+                deactivate DB
+                activate BE
+                BE --> FE: 500 Internal Server Error ("Failed to reject adoption process")
+                deactivate BE
+                activate FE
+                FE -> Admin: Tampilkan pesan "Failed to reject adoption process. Please try again."
+                deactivate FE
+            end
+
+        else Membatalkan konfirmasi
+            Admin -> FE: Klik "Cancel"
+            activate FE
+            FE -> Admin: Tutup pop-up, tidak ada perubahan
+            deactivate FE
+        end
+    end
 
 @enduml

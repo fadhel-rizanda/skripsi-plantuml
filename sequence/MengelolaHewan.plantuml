@@ -13,7 +13,7 @@ hide footbox
 ' === Participants ===
 actor "Penyedia Hewan" as Provider
 participant "Next.js FE (Pet Page)" as FE
-participant "Laravel BE (PetController)" as BE
+participant "PetController (Laravel BE)" as BE
 participant "AttachmentController" as FileBE
 participant "Redis Cache" as Redis
 participant "Cloud Storage (S3)" as Storage
@@ -159,37 +159,10 @@ deactivate FE
 
 
 '== D. Edit dan Simpan Perubahan ==
+alt Mengedit informasi hewan
 Provider -> FE: Klik "Edit Information"
 activate FE
-'Provider -> FE: Klik "Edit Information"
-'activate FE
-'FE -> BE: GET /api/tags
-'activate BE
-'BE -> Redis: GET cache:tags
-'activate Redis
-'
-'alt Cache tersedia
-'    Redis --> BE: Return cached tags
-'else Cache kosong
-'    Redis --> BE: Cache miss
-'    deactivate Redis
-'    BE -> DB: Mengambil semua data tag
-'    activate DB
-'    DB --> BE: Return tags data
-'    deactivate DB
-'    BE -> Redis: SET cache:tags (expired 1 jam)
-'    activate Redis
-'    Redis --> BE: OK
-'    deactivate Redis
-'end
-'BE --> FE: 200 OK (Tags data)
-
-'deactivate BE
-'FE -> FE: Simpan tags di FE state
-FE -> FE: Memasukkan data hewan kedalam form edit
-activate FE #LightBlue
-deactivate FE #LightBlue
-FE -> FE: Ambil tags di FE state
+FE -> FE: Memasukkan data baru hewan kedalam form edit
 activate FE #LightBlue
 deactivate FE #LightBlue
 FE -> Provider: Tampilkan form edit + data lama
@@ -197,66 +170,7 @@ deactivate FE
 
 
 '== E. Menyimpan Perubahan ==
-
-
-alt Ada file baru
-    Provider -> FE: Submit form edit dan file baru
-    activate FE
-    FE -> FileBE: GET /api/attachments/presigned-url
-    deactivate FE
-    activate FileBE
-
-    alt Gagal generate URL
-        FileBE --> FE: 500 Internal Server Error ("Failed to generate URL")
-        activate FE
-        FE -> Provider: Tampilkan pesan "Failed to generate upload URL"
-        deactivate FE
-    else URL berhasil
-        FileBE --> FE: 200 OK (Pre-signed URL)
-        deactivate FileBE
-        activate FE
-        FE -> Storage: POST file ke pre-signed URL
-        deactivate FE
-        activate Storage
-
-        alt Upload gagal
-            Storage --> FE: 500 Internal Server Error ("Upload failed")
-            activate FE
-            FE -> Provider: Tampilkan pesan "Failed to upload file"
-            deactivate FE
-        else Upload berhasil
-            Storage --> FE: Success
-            deactivate Storage
-            activate FE
-            FE -> BE: PUT /api/pets/{id} (Pet data)
-            deactivate FE
-            activate BE
-            BE -> DB: Update data hewan
-            deactivate BE
-            activate DB
-
-            alt Gagal update
-                DB --> BE: Error response (e.g., constraint violation / connection failure)
-                activate BE
-                BE --> FE: 500 Internal Server Error ("Failed to update pet")
-                deactivate BE
-                activate FE
-                FE -> Provider: Tampilkan pesan "Failed to update pet"
-                deactivate FE
-            else Berhasil update
-                DB --> BE: Success (Pet updated)
-                deactivate DB
-                activate BE
-                BE --> FE: 200 OK (Pet updated)
-                deactivate BE
-                activate FE
-                FE -> Provider: Tampilkan pesan "Pet updated successfully"
-                deactivate FE
-            end
-        end
-    end
-else Tidak ada file baru
-    Provider -> FE: Submit form edit tanpa file baru
+    Provider -> FE: Submit form edit
     activate FE
     FE -> BE: PUT /api/pets/{id} (Pet data)
     deactivate FE
@@ -283,7 +197,51 @@ else Tidak ada file baru
         FE -> Provider: Tampilkan pesan "Pet updated successfully"
         deactivate FE
     end
-end
-deactivate FE
+    else Tidak mengedit informasi hewan
+                Provider -> FE: Klik tombol "Takedown"
+                activate FE
+                FE -> Provider: Tampilkan pop-up konfirmasi
+                deactivate FE
+
+                alt Konfirmasi "Continue"
+                    Provider -> FE: Klik "Continue"
+                    activate FE
+                    FE -> BE: DELETE /api/pets/{id}
+                    deactivate FE
+                    activate BE
+                    BE -> DB: Hapus data hewan berdasarkan ID
+                    deactivate BE
+                    activate DB
+
+                    alt Penghapusan berhasil
+                        DB --> BE: Success (Row deleted)
+                        activate BE
+                        BE --> FE: 200 OK ("Pet deleted successfully")
+                        deactivate BE
+                        activate FE
+                        FE -> FE: Redirect ke halaman daftar hewan
+                        activate FE #LightBlue
+                        deactivate FE #LightBlue
+                        FE -> Provider: Tampilkan pesan "Pet deleted successfully"
+                        deactivate FE
+
+                    else Gagal menghapus data
+                        DB --> BE: Error (e.g., data not found / connection failure)
+                        deactivate DB
+                        activate BE
+                        BE --> FE: 500 Internal Server Error ("Failed to delete pet")
+                        deactivate BE
+                        activate FE
+                        FE -> Provider: Tampilkan pesan "Failed to delete pet. Please try again."
+                        deactivate FE
+                    end
+
+                else Membatalkan konfirmasi
+                    Provider -> FE: Klik "Cancel"
+                    activate FE
+                    FE -> Provider: Tutup pop-up tanpa aksi
+                    deactivate FE
+                end
+    end
 
 @enduml

@@ -14,6 +14,9 @@ hide footbox
 actor Pengguna
 participant "Register Page (Next.js FE)" as FE
 participant "AuthController (Laravel BE)" as BE
+participant "Preferences Page (Next.js FE)" as FE
+participant "UserController (Laravel BE)" as BE_Pref
+participant "TagController (Laravel BE)" as BE_Filter
 participant "Cache (Redis)" as Redis
 database "Database (PostgreSQL)" as DB
 participant "ActivationCodeNotification (Laravel BE)" as Mailer
@@ -156,7 +159,7 @@ alt Pengguna sudah terdaftar
     activate FE #LightBlue
     deactivate FE
     
-    FE -> Pengguna: Mengarahkan ke dashboard
+    FE -> Pengguna: Mengarahkan ke halaman Preferences
     deactivate FE
 
 else Pengguna belum terdaftar
@@ -185,8 +188,77 @@ else Pengguna belum terdaftar
     activate FE #LightBlue
     deactivate FE
     deactivate BE
-    FE -> Pengguna: Mengarahkan ke dashboard (verified)
+    FE -> Pengguna: Mengarahkan ke halaman Preferences (verified)
     deactivate FE
 end
+end
+
+Pengguna -> FE: Membuka halaman Preferences
+activate FE
+
+' --- Paralel Request ---
+    FE -> BE_Filter: GET /api/preference-tags
+    activate BE_Filter
+    BE_Filter -> Redis: GET cache:preference_tags
+    activate Redis
+
+    alt Cache tersedia
+        Redis --> BE_Filter: Return cached tags
+    else Cache kosong / expired
+        Redis --> BE_Filter: Cache miss
+        deactivate Redis
+        BE_Filter -> DB: Mengambil semua data tag dari tabel referensi
+        activate DB
+        DB --> BE_Filter: Return list of tags
+        deactivate DB
+        BE_Filter -> Redis: SET cache:preference_tags (data, expired 1 jam)
+        activate Redis
+        Redis --> BE_Filter: OK
+        deactivate Redis
+    end
+        BE_Filter --> FE: 200 OK (Data tags)
+        deactivate BE_Filter
+    FE -> FE: Simpan tags di FE state
+    activate FE #LightBlue
+    deactivate FE #LightBlue
+
+FE -> Pengguna: Tampilkan form preferensi dengan opsi (personality, pengalaman, preferensi hewan)
+deactivate FE
+
+' === Alternate: Skip for later ===
+alt Pengguna memilih "Skip for later"
+    Pengguna -> FE: Klik "Skip for later"
+    activate FE
+    FE -> Pengguna: Arahkan ke halaman "Find a Pet" tanpa menyimpan preferensi
+    deactivate FE
+    else Pengguna mengisi form preferensi
+' === User Mengisi Form ===
+Pengguna -> FE: Mengisi personality, pengalaman, dan preferensi hewan
+activate FE
+FE -> BE_Pref: POST /api/user/preferences {data_preferensi}
+deactivate FE
+activate BE_Pref
+    BE_Pref -> DB: Simpan data preferences untuk user
+    deactivate BE_Pref
+    activate DB
+    alt Berhasil disimpan
+        DB --> BE_Pref: Success (Preferences saved)
+        activate BE_Pref
+        BE_Pref --> FE: 200 OK ("Preferences saved")
+        deactivate BE_Pref
+        activate FE
+        FE -> Pengguna: Arahkan ke halaman "Find a Pet"
+        deactivate FE
+    else Gagal menyimpan ke database
+        DB --> BE_Pref: Error (e.g., constraint violation / connection failure)
+        deactivate DB
+        activate BE_Pref
+
+        BE_Pref --> FE: 500 Internal Server Error ("Failed to save preferences")
+        deactivate BE_Pref
+        activate FE
+        FE -> Pengguna: Tampilkan pesan "Failed to save preferences. Please try again."
+        deactivate FE
+    end
 end
 @enduml
