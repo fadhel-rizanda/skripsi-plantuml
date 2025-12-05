@@ -30,7 +30,43 @@ deactivate DB
 BE --> FE: 200 OK (Data requirement)
 deactivate BE
 FE -> Adopter: Tampilkan daftar requirement
+' === Flow: Menentukan Requirement ===
+Provider -> FE: Klik tombol "Set Requirement"
+FE -> FE: Tampilkan modal input (Name, Notes)
+activate FE #LightBlue
+deactivate FE #LightBlue
+
+Provider -> FE: Isi requirement dan tekan "Save"
+FE -> BE: POST /api/requirements {requirements[]}
 deactivate FE
+activate BE
+    BE -> DB: Simpan semua requirement ke tabel requirements
+    activate DB
+
+    alt Berhasil menyimpan requirement
+        DB --> BE: Success (Requirements saved)
+
+        BE -> Reverb: Broadcast event "MessageSent" ke channel "notification.{user_id}
+        activate Reverb
+        Reverb -> Adopter: Push notification "Requirements set by provider"
+            Reverb --> BE: Event broadcasted
+        deactivate Reverb
+        BE --> FE: 201 Created (Daftar requirement terbaru)
+        deactivate BE
+        activate FE
+        FE -> Provider: Tampilkan requirement yang telah ditentukan
+        deactivate FE
+
+    else Gagal menyimpan requirement (DB error)
+        DB --> BE: Error response (e.g., constraint violation / connection failure)
+        deactivate DB
+        activate BE
+        BE --> FE: 500 Internal Server Error ("Failed to set requirements")
+        deactivate BE
+        activate FE
+        FE -> Provider: Tampilkan pesan "Failed to set requirements. Please try again."
+        deactivate FE
+end
 
 '== Mengunggah Dokumen Requirement ==
 Adopter -> FE: Tekan tombol "Upload File" dan masukan file terkait

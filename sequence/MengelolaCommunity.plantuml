@@ -157,41 +157,11 @@ deactivate BE
 FE -> Provider: Tampilkan halaman detail komunitas
 deactivate FE
 
-
+alt Mengedit Informasi Komunitas
 '== D. Edit dan Simpan Perubahan ==
 Provider -> FE: Klik "Edit Information"
 activate FE
-'Provider -> FE: Klik "Edit Information"
-'activate FE
-'FE -> BE: GET /api/tags
-'activate BE
-'BE -> Redis: GET cache:tags
-'activate Redis
-'
-'alt Cache tersedia
-'    Redis --> BE: Return cached tags
-'else Cache kosong
-'    Redis --> BE: Cache miss
-'    deactivate Redis
-'    BE -> DB: Ambil semua data tag
-'    activate DB
-'    DB --> BE: Return tags data
-'    deactivate DB
-'    BE -> Redis: SET cache:tags (expired 1 jam)
-'    activate Redis
-'    Redis --> BE: OK
-'    deactivate Redis
-'end
-'BE --> FE: 200 OK (Tags data)
-'
-'deactivate BE
-'FE -> FE: Simpan tags di FE state
-'activate FE #LightBlue
-'deactivate FE #LightBlue
-FE -> FE: Memasukkan data komunitas kedalam form edit
-activate FE #LightBlue
-deactivate FE #LightBlue
-FE -> FE: Ambil tags di FE state
+FE -> FE: Memasukkan data komunitas terbaru
 activate FE #LightBlue
 deactivate FE #LightBlue
 FE -> Provider: Tampilkan form edit + data lama
@@ -201,64 +171,7 @@ deactivate FE
 '== E. Menyimpan Perubahan ==
 
 
-alt Ada gambar baru
-    Provider -> FE: Submit form edit dan gambar baru
-    activate FE
-    FE -> FileBE: GET /api/attachments/presigned-url
-    deactivate FE
-    activate FileBE
-
-    alt Gagal generate URL
-        FileBE --> FE: 500 Internal Server Error ("Failed to generate URL")
-        activate FE
-        FE -> Provider: Tampilkan pesan "Failed to generate upload URL"
-        deactivate FE
-    else URL berhasil
-        FileBE --> FE: 200 OK (Pre-signed URL)
-        deactivate FileBE
-        activate FE
-        FE -> Storage: POST gambar ke pre-signed URL
-        deactivate FE
-        activate Storage
-
-        alt Upload gagal
-            Storage --> FE: Error ("Upload failed")
-            activate FE
-            FE -> Provider: Tampilkan pesan "Failed to upload image"
-            deactivate FE
-        else Upload berhasil
-            Storage --> FE: Success
-            deactivate Storage
-            activate FE
-            FE -> BE: PUT /api/communities/{id} (Community data)
-            deactivate FE
-            activate BE
-            BE -> DB: Update data komunitas
-            deactivate BE
-            activate DB
-
-            alt Gagal update
-                DB --> BE: Error (e.g., constraint violation / data not found / connection failure)
-                activate BE
-                BE --> FE: 500 Internal Server Error ("Failed to update community")
-                deactivate BE
-                activate FE
-                FE -> Provider: Tampilkan pesan "Failed to update community"
-                deactivate FE
-            else Berhasil update
-                DB --> BE: Success (Community updated)
-                deactivate DB
-                activate BE
-                BE --> FE: 200 OK (Community updated)
-                deactivate BE
-                activate FE
-                FE -> Provider: Tampilkan pesan "Community updated successfully"
-                deactivate FE
-            end
-        end
-    end
-else Tidak ada gambar baru
-    Provider -> FE: Submit form edit tanpa gambar baru
+    Provider -> FE: Submit form edit
     activate FE
     FE -> BE: PUT /api/communities/{id} (Community data)
     deactivate FE
@@ -284,8 +197,52 @@ else Tidak ada gambar baru
         activate FE
         FE -> Provider: Tampilkan pesan "Community updated successfully"
         deactivate FE
+end
+else Menghapus Community
+Provider -> FE: Klik tombol "Takedown"
+    activate FE
+    FE -> Provider: Tampilkan pop-up konfirmasi penghapusan
+    deactivate FE
+
+    alt Konfirmasi "Continue"
+        Provider -> FE: Klik "Continue"
+        activate FE
+        FE -> BE: DELETE /api/communities/{id}
+        deactivate FE
+        activate BE
+        BE -> DB: Hapus data komunitas berdasarkan ID
+        deactivate BE
+        activate DB
+
+        alt Penghapusan berhasil
+            DB --> BE: Success (Row deleted)
+            activate BE
+            BE --> FE: 200 OK ("Community deleted successfully")
+            deactivate BE
+            activate FE
+            FE -> FE: Redirect ke halaman daftar komunitas
+            activate FE #LightBlue
+            deactivate FE #LightBlue
+            FE -> Provider: Tampilkan pesan "Community deleted successfully"
+            deactivate FE
+
+        else Gagal menghapus data
+            DB --> BE: Error (e.g., data not found / connection failure)
+            deactivate DB
+            activate BE
+            BE --> FE: 500 Internal Server Error ("Failed to delete community")
+            deactivate BE
+            activate FE
+            FE -> Provider: Tampilkan pesan "Failed to delete community. Please try again."
+            deactivate FE
+        end
+
+    else Membatalkan konfirmasi
+        Provider -> FE: Klik "Cancel"
+        activate FE
+        FE -> Provider: Tutup pop-up, data komunitas tetap tersimpan
+        deactivate FE
     end
 end
-deactivate FE
 
 @enduml

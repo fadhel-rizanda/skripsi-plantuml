@@ -161,49 +161,14 @@ deactivate FE
 
 
 '== D. Edit dan Simpan Perubahan ==
-group Mengedit Post
+alt Mengedit Post
 Provider -> FE: Klik "Edit Information"
 activate FE
-'Provider -> FE: Klik "Edit Information"
-'activate FE
-'FE -> BE: GET /api/tags
-'activate BE
-'BE -> Redis: GET cache:tags
-'activate Redis
-'
-'alt Cache tersedia
-'    Redis --> BE: Return cached tags
-'else Cache kosong
-'    Redis --> BE: Cache miss
-'    deactivate Redis
-'    BE -> DB: Mengambil semua data tag
-'    activate DB
-'    DB --> BE: Return tags data
-'    deactivate DB
-'    BE -> Redis: SET cache:tags (expired 1 jam)
-'    activate Redis
-'    Redis --> BE: OK
-'    deactivate Redis
-'end
-'BE --> FE: 200 OK (Tags data)
-'
-'deactivate BE
-'FE -> FE: Simpan tags di FE state
-'activate FE #LightBlue
-'deactivate FE #LightBlue
 FE -> FE: Memasukkan data post kedalam form edit
-activate FE #LightBlue
-deactivate FE #LightBlue
-FE -> FE: Ambil tags di FE state
 activate FE #LightBlue
 deactivate FE #LightBlue
 FE -> Provider: Tampilkan form edit + data lama
 deactivate FE
-
-
-'== E. Menyimpan Perubahan ==
-
-
 Provider -> FE: Submit form
 activate FE
 FE -> BE: PUT /api/posts/{id} (Post data)
@@ -231,7 +196,51 @@ else Berhasil update
     FE -> Provider: Tampilkan pesan "Post updated successfully"
     deactivate FE
 end
+else Menghapus Post
+Provider -> FE: Klik tombol "Takedown"
+    activate FE
+    FE -> Provider: Tampilkan pop-up konfirmasi penghapusan
+    deactivate FE
+
+    alt Konfirmasi "Continue"
+        Provider -> FE: Klik "Continue"
+        activate FE
+        FE -> BE: DELETE /api/posts/{id}
+        deactivate FE
+        activate BE
+        BE -> DB: Hapus data post berdasarkan ID
+        deactivate BE
+        activate DB
+
+        alt Penghapusan berhasil
+            DB --> BE: Success (Row deleted)
+            activate BE
+            BE --> FE: 200 OK ("Post deleted successfully")
+            deactivate BE
+            activate FE
+            FE -> FE: Redirect ke halaman daftar post
+            activate FE #LightBlue
+            deactivate FE #LightBlue
+            FE -> Provider: Tampilkan pesan "Post deleted successfully"
+            deactivate FE
+
+        else Gagal menghapus data
+            DB --> BE: Error (e.g., data not found / connection failure)
+            deactivate DB
+            activate BE
+            BE --> FE: 500 Internal Server Error ("Failed to delete post")
+            deactivate BE
+            activate FE
+            FE -> Provider: Tampilkan pesan "Failed to delete post. Please try again."
+            deactivate FE
+        end
+
+    else Membatalkan konfirmasi
+        Provider -> FE: Klik "Cancel"
+        activate FE
+        FE -> Provider: Tutup pop-up, data post tetap tersimpan
+        deactivate FE
+    end
 end
-deactivate FE
 
 @enduml
